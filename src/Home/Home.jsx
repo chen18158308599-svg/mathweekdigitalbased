@@ -1,0 +1,134 @@
+import "./Home.css";
+
+import background from "../assets/home-layers/background.png";
+import average from "../assets/home-layers/average.png";
+import conway from "../assets/home-layers/conway.png";
+import deal from "../assets/home-layers/deal.png";
+import knn from "../assets/home-layers/knn.png";
+import sequence from "../assets/home-layers/sequence.png";
+import planarity from "../assets/home-layers/planarity.png";
+import symmetry from "../assets/home-layers/symmetry.png";
+
+export default function Home({ onSelectGame }) {
+  return (
+    <>
+      {/* =========================
+          MATH WEEK TITLE
+      ========================= */}
+      <div className="mathweek-title">
+        <div className="mathweek-title-main">MATH WEEK</div>
+      </div>
+
+      {/* =========================
+          HOME
+      ========================= */}
+      <main className="home-page">
+        {/* Background */}
+        <img
+          src={background}
+          className="home-background"
+          alt=""
+          draggable="false"
+        />
+
+        {/* Average Game */}
+        <button
+          type="button"
+          className="island average-island"
+          onClick={() => onSelectGame("average")}
+          aria-label="Open Average Game"
+        >
+          <img
+            src={average}
+            alt="Average Game"
+            draggable="false"
+          />
+        </button>
+
+        {/* Conway */}
+        <button
+          type="button"
+          className="island conway-island"
+          onClick={() => onSelectGame("conway")}
+          aria-label="Open Conway"
+        >
+          <img
+            src={conway}
+            alt="Conway"
+            draggable="false"
+          />
+        </button>
+
+        {/* Deal or No Deal */}
+        <button
+          type="button"
+          className="island deal-island"
+          onClick={() => onSelectGame("deal")}
+          aria-label="Open Deal or No Deal"
+        >
+          <img
+            src={deal}
+            alt="Deal or No Deal"
+            draggable="false"
+          />
+        </button>
+
+        {/* KNN */}
+        <button
+          type="button"
+          className="island knn-island"
+          onClick={() => onSelectGame("knn")}
+          aria-label="Open KNN"
+        >
+          <img
+            src={knn}
+            alt="KNN"
+            draggable="false"
+          />
+        </button>
+
+        {/* Number Sequence */}
+        <button
+          type="button"
+          className="island sequence-island"
+          onClick={() => onSelectGame("sequence")}
+          aria-label="Open Number Sequence"
+        >
+          <img
+            src={sequence}
+            alt="Number Sequence"
+            draggable="false"
+          />
+        </button>
+
+        {/* Planarity */}
+        <button
+          type="button"
+          className="island planarity-island"
+          onClick={() => onSelectGame("planarity")}
+          aria-label="Open Planarity"
+        >
+          <img
+            src={planarity}
+            alt="Planarity"
+            draggable="false"
+          />
+        </button>
+
+        {/* Symmetry */}
+        <button
+          type="button"
+          className="island symmetry-island"
+          onClick={() => onSelectGame("symmetry")}
+          aria-label="Open Symmetry"
+        >
+          <img
+            src={symmetry}
+            alt="Symmetry"
+            draggable="false"
+          />
+        </button>
+      </main>
+    </>
+  );
+}

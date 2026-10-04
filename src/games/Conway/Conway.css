@@ -1,0 +1,2541 @@
+/* =========================================================
+   CONWAY TABLE TENNIS V3
+   - 30s forced Conway
+   - 5s ready
+   - P1 draft -> P2 draft
+   - force-based ball speed
+   - one skill only: force-cap upgrade
+   ========================================================= */
+
+.conway-page,
+.conway-page *,
+.conway-page *::before,
+.conway-page *::after {
+  box-sizing: border-box;
+}
+
+.conway-page {
+  position: fixed;
+  inset: 0;
+
+  display: grid;
+  place-items: center;
+
+  overflow: hidden;
+
+  color: #f6f4ef;
+  background: #020714;
+
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.conway-page button {
+  font: inherit;
+}
+
+.conway-page button:focus-visible {
+  outline: 2px solid #ffe8a5;
+  outline-offset: 3px;
+}
+
+.conway-page .cw-frame {
+  position: relative;
+
+  width: min(100vw, 177.7778vh);
+  height: min(100vh, 56.25vw);
+
+  aspect-ratio: 16 / 9;
+
+  overflow: hidden;
+  isolation: isolate;
+
+  background: #06122c;
+
+  border: 1px solid rgba(255, 225, 151, 0.17);
+
+  box-shadow:
+    inset 0 0 100px rgba(0, 0, 0, 0.18),
+    0 28px 90px rgba(0, 0, 0, 0.38);
+}
+
+/* =========================================================
+   ENTRY
+   ========================================================= */
+
+.conway-page .cw-entry {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #081333;
+}
+
+.conway-page .cw-entry-bg {
+  position: absolute;
+  inset: -2%;
+
+  width: 104%;
+  height: 104%;
+
+  object-fit: cover;
+  pointer-events: none;
+
+  animation: cwEntryMove 15s ease-in-out infinite alternate;
+}
+
+.conway-page .cw-entry-shade {
+  position: absolute;
+  inset: 0;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(4, 9, 31, 0.4),
+      rgba(5, 10, 34, 0.07) 48%,
+      rgba(4, 8, 28, 0.15)
+    ),
+    radial-gradient(
+      circle at 73% 54%,
+      rgba(67, 108, 255, 0.13),
+      transparent 30%
+    );
+}
+
+
+
+.conway-page .cw-entry-topbar {
+  position: absolute;
+  z-index: 30;
+
+  left: 4%;
+  right: 3.6%;
+  top: 8.2%;
+
+  min-height: 8.1%;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0.9% 1.15%;
+
+  border: 1px solid rgba(255, 224, 151, 0.19);
+  border-radius: 18px;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(7, 20, 57, 0.9),
+      rgba(10, 21, 62, 0.85),
+      rgba(13, 16, 54, 0.88)
+    );
+
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.2),
+    inset 0 1px rgba(255, 255, 255, 0.05);
+
+  backdrop-filter: blur(12px);
+}
+
+.conway-page .cw-entry-topbar > div span {
+  display: block;
+
+  color: #e5bf73;
+
+  font-size: clamp(7px, 0.53vw, 10px);
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.conway-page .cw-entry-topbar > div strong {
+  display: block;
+
+  margin-top: 5px;
+
+  color: #fff0c2;
+
+  font:
+    700 clamp(14px, 1.18vw, 22px)
+    Georgia,
+    "Times New Roman",
+    serif;
+}
+
+.conway-page .cw-entry-topbar nav {
+  display: flex;
+  gap: 8px;
+}
+
+.conway-page .cw-entry-topbar nav button {
+  min-width: 62px;
+  height: clamp(34px, 3vw, 44px);
+
+  padding: 0 14px;
+
+  border: 1px solid rgba(255, 224, 151, 0.34);
+  border-radius: 999px;
+
+  color: #f4e7c8;
+  background: rgba(8, 18, 49, 0.65);
+
+  cursor: pointer;
+}
+
+.conway-page .cw-entry-layout {
+  position: absolute;
+  inset: 18% 5.5% 4.2% 6.8%;
+  z-index: 8;
+
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  align-items: center;
+  gap: 3.3%;
+}
+
+.conway-page .cw-entry-copy {
+  position: relative;
+  z-index: 5;
+
+  max-width: 650px;
+  padding-left: 4%;
+}
+
+.conway-page .cw-entry-badge {
+  display: inline-flex;
+
+  padding: 8px 17px;
+
+  border: 1px solid rgba(255, 222, 143, 0.34);
+  border-radius: 999px;
+
+  color: #ffe09a;
+  background: rgba(35, 34, 77, 0.42);
+
+  font-size: clamp(8px, 0.62vw, 11px);
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.conway-page .cw-entry-copy h1 {
+  margin: 4.2% 0 0;
+
+  color: #fff0b7;
+
+  font:
+    800 clamp(52px, 5.6vw, 96px) / 0.95
+    Georgia,
+    "Times New Roman",
+    serif;
+
+  letter-spacing: 0.035em;
+
+  text-shadow:
+    0 3px 0 rgba(92, 53, 19, 0.88),
+    0 0 11px rgba(255, 241, 181, 0.8),
+    0 0 31px rgba(255, 185, 74, 0.26),
+    0 17px 27px rgba(0, 0, 0, 0.33);
+}
+
+.conway-page .cw-entry-copy h2 {
+  margin: 10px 0 16px;
+
+  color: #a9d8ff;
+
+  font-size: clamp(10px, 0.8vw, 14px);
+  letter-spacing: 0.2em;
+}
+
+.conway-page .cw-entry-copy > p {
+  max-width: 610px;
+
+  margin: 0;
+
+  color: rgba(234, 235, 250, 0.78);
+
+  font-size: clamp(11px, 0.9vw, 16px);
+  line-height: 1.72;
+}
+
+.conway-page .cw-entry-copy .cw-entry-sub {
+  margin-top: 5px;
+
+  color: rgba(215, 221, 242, 0.58);
+
+  font-size: clamp(9px, 0.72vw, 13px);
+}
+
+.conway-page .cw-entry-start {
+  width: clamp(230px, 20vw, 380px);
+  min-height: clamp(52px, 5.5vw, 72px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+
+  margin-top: 5.1%;
+
+  border: 1px solid rgba(255, 244, 202, 0.76);
+  border-radius: 16px;
+
+  color: #281b0b;
+
+  background:
+    linear-gradient(
+      180deg,
+      #fff1b4,
+      #e2b74f
+    );
+
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.76),
+    0 10px 28px rgba(0, 0, 0, 0.27),
+    0 0 22px rgba(255, 188, 75, 0.16);
+
+  font-size: clamp(14px, 1.08vw, 19px);
+  font-weight: 900;
+
+  cursor: pointer;
+}
+
+.conway-page .cw-entry-island {
+  position: relative;
+
+  width: 100%;
+  height: 100%;
+
+  display: grid;
+  place-items: center;
+
+  pointer-events: none;
+}
+
+.conway-page .cw-entry-island img {
+  position: relative;
+  z-index: 4;
+
+  width: 94%;
+  max-width: 720px;
+  height: auto;
+
+  object-fit: contain;
+
+  filter:
+    drop-shadow(0 26px 26px rgba(0, 0, 0, 0.38))
+    drop-shadow(0 0 26px rgba(87, 110, 255, 0.22));
+
+  animation: cwIslandFloat 5s ease-in-out infinite;
+}
+
+.conway-page .cw-island-glow {
+  position: absolute;
+
+  left: 50%;
+  top: 53%;
+
+  width: 74%;
+  height: 45%;
+
+  transform: translate(-50%, -50%);
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      ellipse,
+      rgba(107, 102, 255, 0.28),
+      rgba(77, 93, 255, 0.1) 42%,
+      transparent 72%
+    );
+
+  filter: blur(16px);
+}
+
+.conway-page .cw-entry-orbit {
+  position: absolute;
+
+  left: 50%;
+  top: 52%;
+
+  border: 1px solid rgba(173, 209, 255, 0.19);
+  border-radius: 50%;
+}
+
+.conway-page .orbit-a {
+  width: 80%;
+  height: 30%;
+
+  transform: translate(-50%, -50%) rotate(-14deg);
+}
+
+.conway-page .orbit-b {
+  width: 62%;
+  height: 48%;
+
+  transform: translate(-50%, -50%) rotate(28deg);
+}
+
+/* =========================================================
+   TABLE TENNIS
+   ========================================================= */
+
+.conway-page .cw-match {
+  position: absolute;
+  inset: 0;
+
+  overflow: hidden;
+
+  background:
+    radial-gradient(
+      circle at 50% 34%,
+      rgba(85, 124, 255, 0.16),
+      transparent 31%
+    ),
+    linear-gradient(
+      180deg,
+      #07142e 0%,
+      #0a214a 50%,
+      #06142e 100%
+    );
+}
+
+.conway-page .cw-match::before {
+  content: "";
+
+  position: absolute;
+  inset: 0;
+
+  opacity: 0.4;
+
+  background:
+    radial-gradient(
+      circle at 9% 22%,
+      rgba(90, 160, 255, 0.5) 0 1px,
+      transparent 1.5px
+    ),
+    radial-gradient(
+      circle at 79% 19%,
+      rgba(213, 181, 255, 0.55) 0 1px,
+      transparent 1.5px
+    );
+
+  background-size:
+    76px 64px,
+    91px 78px;
+}
+
+.conway-page .cw-match-hud {
+  position: absolute;
+  z-index: 90;
+
+  left: 1.5%;
+  right: 1.5%;
+  top: 1.6%;
+
+  min-height: 7.7%;
+
+  display: grid;
+  grid-template-columns: auto 1fr 0.85fr auto 1fr;
+  align-items: center;
+  gap: 9px;
+
+  padding: 0.7% 1%;
+
+  border: 1px solid rgba(255, 225, 151, 0.18);
+  border-radius: 18px;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(8, 23, 57, 0.94),
+      rgba(11, 18, 53, 0.91),
+      rgba(12, 22, 60, 0.94)
+    );
+
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.25),
+    inset 0 1px rgba(255, 255, 255, 0.05);
+
+  backdrop-filter: blur(14px);
+}
+
+.conway-page .cw-back-button {
+  width: 38px;
+  height: 38px;
+
+  display: grid;
+  place-items: center;
+
+  padding: 0;
+
+  border: 1px solid rgba(255, 224, 155, 0.42);
+  border-radius: 50%;
+
+  color: #ffe8aa;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(20, 47, 79, 0.96),
+      rgba(6, 22, 47, 0.96)
+    );
+
+  cursor: pointer;
+}
+
+.conway-page .cw-score-box {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+
+  min-width: 0;
+}
+
+.conway-page .cw-score-right {
+  text-align: right;
+}
+
+.conway-page .cw-score-box > span {
+  color: rgba(216, 231, 251, 0.6);
+
+  font-size: 8px;
+  letter-spacing: 0.1em;
+}
+
+.conway-page .cw-score-box > strong {
+  color: #fff0ba;
+
+  font:
+    800 clamp(23px, 2vw, 36px)
+    ui-monospace,
+    monospace;
+}
+
+.conway-page .cw-score-box > small {
+  padding: 4px 7px;
+
+  border: 1px solid rgba(255, 219, 137, 0.15);
+  border-radius: 999px;
+
+  color: #f4d584;
+
+  background: rgba(255, 212, 102, 0.05);
+
+  font-size: 8px;
+}
+
+.conway-page .cw-score-center {
+  text-align: center;
+}
+
+.conway-page .cw-score-center > span {
+  display: block;
+
+  color: #8fbfe9;
+
+  font-size: 7px;
+  letter-spacing: 0.18em;
+}
+
+.conway-page .cw-score-center > strong {
+  display: block;
+
+  color: #f7f1de;
+
+  font:
+    800 clamp(21px, 1.9vw, 34px)
+    Georgia,
+    serif;
+}
+
+.conway-page .cw-score-center i {
+  margin: 0 8px;
+
+  color: rgba(181, 205, 243, 0.4);
+
+  font-style: normal;
+}
+
+.conway-page .cw-score-center > small {
+  color: rgba(192, 214, 241, 0.44);
+
+  font-size: 7px;
+}
+
+.conway-page .cw-table-countdown {
+  width: clamp(84px, 7vw, 112px);
+  height: 47px;
+
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: 1fr 1fr;
+  align-items: center;
+  column-gap: 7px;
+
+  padding: 6px 9px;
+
+  border: 1px solid rgba(141, 190, 250, 0.18);
+  border-radius: 12px;
+
+  background: rgba(7, 30, 63, 0.7);
+}
+
+.conway-page .cw-table-countdown span {
+  grid-row: 1 / 3;
+
+  color: rgba(171, 209, 245, 0.48);
+
+  font-size: 6px;
+  letter-spacing: 0.12em;
+}
+
+.conway-page .cw-table-countdown strong {
+  align-self: end;
+
+  color: #b9dcff;
+
+  font:
+    800 19px
+    ui-monospace,
+    monospace;
+}
+
+.conway-page .cw-table-countdown small {
+  align-self: start;
+
+  color: rgba(190, 218, 245, 0.36);
+
+  font-size: 5px;
+}
+
+.conway-page .cw-table-countdown.is-danger {
+  border-color: rgba(255, 207, 101, 0.5);
+
+  background: rgba(78, 47, 14, 0.64);
+
+  box-shadow: 0 0 20px rgba(255, 188, 58, 0.1);
+
+  animation: cwCountdownPulse 0.8s ease-in-out infinite;
+}
+
+.conway-page .cw-table-countdown.is-danger strong {
+  color: #ffe09b;
+}
+
+/* =========================================================
+   TABLE
+   ========================================================= */
+
+.conway-page .cw-table-shell {
+  position: absolute;
+  z-index: 10;
+
+  left: 11.5%;
+  right: 11.5%;
+  top: 11.5%;
+  bottom: 22.5%;
+
+  display: grid;
+  place-items: center;
+}
+
+.conway-page .cw-table-glow {
+  position: absolute;
+  inset: -5% -4%;
+
+  border-radius: 28px;
+
+  background:
+    radial-gradient(
+      circle at 50% 35%,
+      rgba(103, 171, 255, 0.09),
+      transparent 42%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(15, 36, 75, 0.68),
+      rgba(5, 20, 44, 0.32)
+    );
+
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.3),
+    inset 0 0 40px rgba(87, 124, 255, 0.07);
+}
+
+.conway-page .cw-table {
+  position: relative;
+
+  width: 100%;
+  height: 100%;
+
+  overflow: hidden;
+
+  border: 3px solid rgba(237, 247, 255, 0.72);
+  border-radius: 18px;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(92, 204, 221, 0.025),
+      transparent 25% 75%,
+      rgba(92, 204, 221, 0.025)
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.012) 0 1px,
+      transparent 1px 24px
+    ),
+    linear-gradient(
+      180deg,
+      #17679d,
+      #145789
+    );
+
+  box-shadow:
+    inset 0 0 55px rgba(0, 0, 0, 0.27),
+    inset 0 1px rgba(255, 255, 255, 0.14),
+    0 20px 44px rgba(0, 0, 0, 0.35);
+
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.conway-page .cw-half {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+
+  width: 50%;
+
+  pointer-events: none;
+}
+
+.conway-page .cw-half-left {
+  left: 0;
+
+  background:
+    radial-gradient(
+      circle at 16% 50%,
+      rgba(80, 173, 255, 0.08),
+      transparent 40%
+    );
+}
+
+.conway-page .cw-half-right {
+  right: 0;
+
+  background:
+    radial-gradient(
+      circle at 84% 50%,
+      rgba(255, 86, 202, 0.055),
+      transparent 40%
+    );
+}
+
+.conway-page .cw-half > span {
+  position: absolute;
+  bottom: 4%;
+
+  color: rgba(230, 241, 252, 0.16);
+
+  font:
+    800 clamp(9px, 0.72vw, 12px)
+    ui-monospace,
+    monospace;
+
+  letter-spacing: 0.15em;
+}
+
+.conway-page .cw-half-left > span {
+  left: 4%;
+}
+
+.conway-page .cw-half-right > span {
+  right: 4%;
+}
+
+.conway-page .cw-horizontal-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+
+  height: 1px;
+
+  background: rgba(255, 255, 255, 0.24);
+
+  pointer-events: none;
+}
+
+.conway-page .cw-quarter-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+
+  width: 1px;
+
+  background: rgba(255, 255, 255, 0.17);
+
+  pointer-events: none;
+}
+
+.conway-page .cw-quarter-line.left {
+  left: 25%;
+}
+
+.conway-page .cw-quarter-line.right {
+  right: 25%;
+}
+
+.conway-page .cw-center-net {
+  position: absolute;
+  z-index: 14;
+
+  left: 50%;
+  top: 0;
+  bottom: 0;
+
+  width: 12px;
+
+  transform: translateX(-50%);
+
+  pointer-events: none;
+}
+
+.conway-page .cw-center-net::before,
+.conway-page .cw-center-net::after {
+  content: "";
+
+  position: absolute;
+  top: 0;
+
+  width: 3px;
+  height: 100%;
+
+  background:
+    linear-gradient(
+      180deg,
+      #eadfbe,
+      #9e9274
+    );
+
+  box-shadow: 0 0 7px rgba(255, 244, 211, 0.24);
+}
+
+.conway-page .cw-center-net::before {
+  left: 0;
+}
+
+.conway-page .cw-center-net::after {
+  right: 0;
+}
+
+.conway-page .cw-center-net i {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  top: 0;
+  bottom: 0;
+
+  opacity: 0.47;
+
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 7px,
+      rgba(245, 247, 250, 0.34) 7px 8px
+    );
+}
+
+/* =========================================================
+   PADDLES
+   ========================================================= */
+
+.conway-page .cw-paddle {
+  --angle: 0deg;
+
+  position: absolute;
+  z-index: 35;
+
+  width: clamp(38px, 3.4vw, 58px);
+  height: clamp(74px, 6.2vw, 104px);
+
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--angle));
+
+  transform-origin: 50% 42%;
+
+  pointer-events: none;
+
+  filter:
+    drop-shadow(0 9px 8px rgba(0, 0, 0, 0.37));
+}
+
+.conway-page .cw-paddle-face {
+  position: absolute;
+  left: 50%;
+  top: 2%;
+
+  width: 72%;
+  aspect-ratio: 0.86;
+
+  transform: translateX(-50%);
+
+  border: 2px solid rgba(61, 21, 18, 0.84);
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle at 31% 27%,
+      rgba(255, 255, 255, 0.24),
+      transparent 17%
+    ),
+    radial-gradient(
+      circle at 42% 40%,
+      #ff716b,
+      #c6232c 56%,
+      #6d111b 100%
+    );
+
+  box-shadow:
+    inset 0 0 11px rgba(255, 255, 255, 0.12),
+    0 4px 9px rgba(0, 0, 0, 0.3);
+}
+
+.conway-page .cw-paddle-two .cw-paddle-face {
+  border-color: rgba(13, 45, 92, 0.9);
+
+  background:
+    radial-gradient(
+      circle at 31% 27%,
+      rgba(255, 255, 255, 0.22),
+      transparent 17%
+    ),
+    radial-gradient(
+      circle at 42% 40%,
+      #63bfff,
+      #246fd4 56%,
+      #123b87 100%
+    );
+}
+
+.conway-page .cw-paddle-handle {
+  position: absolute;
+  left: 50%;
+  top: 57%;
+
+  width: 22%;
+  height: 40%;
+
+  transform: translateX(-50%);
+
+  border-radius: 3px 3px 8px 8px;
+
+  background:
+    linear-gradient(
+      90deg,
+      #734421,
+      #d29a5d 45%,
+      #7c4826 100%
+    );
+
+  box-shadow:
+    0 4px 7px rgba(0, 0, 0, 0.35);
+}
+
+.conway-page .cw-paddle > span {
+  position: absolute;
+  left: 50%;
+  top: -11px;
+
+  transform: translateX(-50%);
+
+  color: rgba(255, 241, 200, 0.8);
+
+  font:
+    800 7px
+    ui-monospace,
+    monospace;
+}
+
+.conway-page .cw-ball {
+  position: absolute;
+  z-index: 45;
+
+  width: clamp(13px, 1.08vw, 18px);
+  aspect-ratio: 1;
+
+  transform: translate(-50%, -50%);
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle at 31% 27%,
+      #fff 0 18%,
+      #ffe8aa 36%,
+      #e8a944 74%,
+      #a85a1e 100%
+    );
+
+  box-shadow:
+    inset -2px -2px 4px rgba(0, 0, 0, 0.26),
+    0 0 8px rgba(255, 222, 134, 0.52),
+    0 0 18px rgba(255, 184, 73, 0.19);
+
+  pointer-events: none;
+}
+
+.conway-page .cw-serve-button,
+.conway-page .cw-match-message {
+  position: absolute;
+  z-index: 70;
+
+  left: 50%;
+  top: 50%;
+
+  transform: translate(-50%, -50%);
+}
+
+.conway-page .cw-serve-button {
+  min-width: 170px;
+
+  padding: 11px 20px;
+
+  border: 1px solid rgba(255, 236, 178, 0.74);
+  border-radius: 15px;
+
+  color: #271909;
+
+  background:
+    linear-gradient(
+      180deg,
+      #fff0b0,
+      #dba746
+    );
+
+  box-shadow:
+    0 11px 26px rgba(0, 0, 0, 0.27),
+    0 0 22px rgba(255, 185, 71, 0.13);
+
+  cursor: pointer;
+}
+
+.conway-page .cw-serve-button span,
+.conway-page .cw-serve-button strong,
+.conway-page .cw-serve-button small {
+  display: block;
+}
+
+.conway-page .cw-serve-button span,
+.conway-page .cw-serve-button small {
+  color: rgba(47, 29, 10, 0.5);
+
+  font-size: 7px;
+}
+
+.conway-page .cw-serve-button strong {
+  margin: 2px 0;
+
+  font-size: 15px;
+}
+
+.conway-page .cw-match-message {
+  max-width: 74%;
+
+  padding: 9px 15px;
+
+  border: 1px solid rgba(142, 204, 255, 0.28);
+  border-radius: 999px;
+
+  color: #dff1ff;
+
+  background: rgba(8, 28, 63, 0.84);
+
+  font-size: 10px;
+  text-align: center;
+
+  backdrop-filter: blur(8px);
+}
+
+.conway-page .cw-drag-tip {
+  position: absolute;
+  left: 50%;
+  bottom: -9.5%;
+  z-index: 55;
+
+  min-width: 44%;
+
+  transform: translateX(-50%);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  padding: 7px 12px;
+
+  border: 1px solid rgba(139, 193, 240, 0.1);
+  border-radius: 999px;
+
+  background: rgba(6, 23, 49, 0.55);
+}
+
+.conway-page .cw-drag-tip > b {
+  color: #f2d37e;
+  font-size: 15px;
+}
+
+.conway-page .cw-drag-tip strong,
+.conway-page .cw-drag-tip small {
+  display: block;
+}
+
+.conway-page .cw-drag-tip strong {
+  color: rgba(219, 236, 249, 0.72);
+
+  font-size: 7px;
+}
+
+.conway-page .cw-drag-tip small {
+  color: rgba(192, 219, 240, 0.38);
+
+  font-size: 6px;
+}
+
+/* =========================================================
+   FORCE PANELS
+   ========================================================= */
+
+.conway-page .cw-power-panel {
+  position: absolute;
+  z-index: 76;
+
+  bottom: 2.6%;
+
+  width: 39%;
+
+  padding: 9px 11px;
+
+  border: 1px solid rgba(137, 193, 241, 0.13);
+  border-radius: 15px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(8, 26, 57, 0.82),
+      rgba(4, 17, 39, 0.77)
+    );
+
+  box-shadow:
+    0 10px 27px rgba(0, 0, 0, 0.22),
+    inset 0 1px rgba(255, 255, 255, 0.035);
+
+  backdrop-filter: blur(10px);
+}
+
+.conway-page .cw-power-left {
+  left: 2%;
+}
+
+.conway-page .cw-power-right {
+  right: 2%;
+}
+
+.conway-page .cw-power-panel > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 8px;
+
+  margin-bottom: 6px;
+}
+
+.conway-page .cw-power-panel > header span {
+  color: rgba(213, 231, 247, 0.52);
+
+  font-size: 7px;
+}
+
+.conway-page .cw-power-panel > header strong {
+  color: #f2d47c;
+
+  font:
+    800 8px
+    ui-monospace,
+    monospace;
+}
+
+.conway-page .cw-force-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.conway-page .cw-force-row > span {
+  color: rgba(229, 239, 248, 0.66);
+
+  font-size: 8px;
+}
+
+.conway-page .cw-force-row > strong {
+  min-width: 30px;
+
+  color: #fff0b4;
+
+  font:
+    800 9px
+    ui-monospace,
+    monospace;
+
+  text-align: right;
+}
+
+.conway-page .cw-force-track {
+  position: relative;
+
+  height: 9px;
+
+  overflow: hidden;
+
+  border: 1px solid rgba(175, 216, 244, 0.15);
+  border-radius: 999px;
+
+  background: rgba(2, 13, 30, 0.72);
+}
+
+.conway-page .cw-force-track > i {
+  display: block;
+
+  height: 100%;
+
+  border-radius: inherit;
+
+  background:
+    linear-gradient(
+      90deg,
+      #5ca6ff 0%,
+      #7dd7da 42%,
+      #ffd46f 74%,
+      #ff745f 100%
+    );
+
+  box-shadow:
+    0 0 9px rgba(255, 202, 91, 0.22);
+
+  transition: width 0.08s linear;
+}
+
+.conway-page .cw-force-track > b {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+
+  width: 2px;
+
+  transform: translateX(-1px);
+
+  border-radius: 2px;
+
+  background: #fff4cf;
+
+  box-shadow: 0 0 8px rgba(255, 234, 169, 0.8);
+}
+
+.conway-page .cw-force-labels {
+  display: flex;
+  justify-content: space-between;
+
+  margin: 3px 35px 6px 31px;
+
+  color: rgba(183, 210, 232, 0.26);
+
+  font-size: 5px;
+}
+
+.conway-page .cw-power-upgrade {
+  width: 100%;
+  min-height: 35px;
+
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 7px;
+
+  padding: 5px 8px;
+
+  border: 1px solid rgba(255, 218, 126, 0.14);
+  border-radius: 9px;
+
+  color: #e9f0f7;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(255, 202, 86, 0.07),
+      rgba(80, 114, 226, 0.05)
+    );
+
+  cursor: pointer;
+}
+
+.conway-page .cw-power-upgrade > i {
+  width: 25px;
+  height: 25px;
+
+  display: grid;
+  place-items: center;
+
+  border: 1px solid rgba(255, 224, 147, 0.2);
+  border-radius: 7px;
+
+  color: #f2d179;
+
+  background: rgba(255, 210, 102, 0.04);
+
+  font-style: normal;
+}
+
+.conway-page .cw-power-upgrade > div span,
+.conway-page .cw-power-upgrade > div strong {
+  display: block;
+}
+
+.conway-page .cw-power-upgrade > div span {
+  color: rgba(194, 219, 238, 0.35);
+
+  font-size: 5px;
+}
+
+.conway-page .cw-power-upgrade > div strong {
+  margin-top: 1px;
+
+  color: #f6ead0;
+
+  font-size: 7px;
+}
+
+.conway-page .cw-power-upgrade > b {
+  color: #f5d27b;
+
+  font:
+    800 8px
+    ui-monospace,
+    monospace;
+}
+
+.conway-page .cw-power-upgrade:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.conway-page .cw-keyboard-hint {
+  position: absolute;
+  z-index: 40;
+
+  left: 50%;
+  bottom: 0.8%;
+
+  transform: translateX(-50%);
+
+  display: flex;
+  gap: 14px;
+
+  color: rgba(184, 213, 237, 0.28);
+
+  font-size: 6px;
+}
+
+/* =========================================================
+   CONWAY DRAFT
+   ========================================================= */
+
+.conway-page .cw-conway {
+  position: absolute;
+  inset: 0;
+
+  overflow: hidden;
+
+  background:
+    radial-gradient(
+      circle at 50% 45%,
+      rgba(85, 93, 235, 0.13),
+      transparent 35%
+    ),
+    linear-gradient(
+      180deg,
+      #06132e,
+      #071a39 50%,
+      #061126
+    );
+}
+
+.conway-page .cw-conway-bg {
+  position: absolute;
+  inset: 0;
+
+  background:
+    linear-gradient(
+      rgba(115, 162, 255, 0.025) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(115, 162, 255, 0.025) 1px,
+      transparent 1px
+    );
+
+  background-size: 42px 42px;
+}
+
+.conway-page .cw-conway-top {
+  position: absolute;
+  z-index: 50;
+
+  left: 4%;
+  right: 4%;
+  top: 3.4%;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 13px 18px;
+
+  border: 1px solid rgba(147, 187, 255, 0.14);
+  border-radius: 18px;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(9, 28, 68, 0.91),
+      rgba(13, 22, 62, 0.89)
+    );
+
+  box-shadow:
+    0 12px 31px rgba(0, 0, 0, 0.22),
+    inset 0 1px rgba(255, 255, 255, 0.04);
+
+  backdrop-filter: blur(10px);
+}
+
+.conway-page .cw-conway-top > div:first-child span {
+  display: block;
+
+  color: #a8c9f2;
+
+  font-size: 7px;
+  letter-spacing: 0.19em;
+}
+
+.conway-page .cw-conway-top > div:first-child strong {
+  display: block;
+
+  margin-top: 3px;
+
+  color: #fff0bd;
+
+  font:
+    700 clamp(18px, 1.55vw, 28px)
+    Georgia,
+    serif;
+}
+
+.conway-page .cw-conway-top > div:first-child small {
+  display: block;
+
+  margin-top: 2px;
+
+  color: rgba(197, 216, 241, 0.47);
+
+  font-size: 8px;
+}
+
+.conway-page .cw-conway-clock {
+  min-width: 84px;
+
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: baseline;
+  gap: 7px;
+
+  padding: 8px 11px;
+
+  border: 1px solid rgba(255, 220, 138, 0.2);
+  border-radius: 13px;
+
+  background: rgba(255, 207, 96, 0.045);
+}
+
+.conway-page .cw-conway-clock span {
+  color: rgba(221, 233, 247, 0.46);
+
+  font-size: 7px;
+}
+
+.conway-page .cw-conway-clock strong {
+  color: #ffe198;
+
+  font:
+    800 28px
+    ui-monospace,
+    monospace;
+}
+
+.conway-page .cw-conway-clock small {
+  color: rgba(221, 233, 247, 0.35);
+
+  font-size: 6px;
+}
+
+.conway-page .cw-draft-flow {
+  position: absolute;
+  z-index: 45;
+
+  left: 50%;
+  top: 14.6%;
+
+  transform: translateX(-50%);
+
+  width: min(640px, 58%);
+
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+}
+
+.conway-page .cw-draft-step {
+  position: relative;
+
+  min-height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  border: 1px solid rgba(143, 190, 238, 0.1);
+  border-radius: 9px;
+
+  color: rgba(195, 217, 239, 0.3);
+
+  background: rgba(255, 255, 255, 0.02);
+
+  font-size: 6px;
+}
+
+.conway-page .cw-draft-step i {
+  font-style: normal;
+  font-family: ui-monospace, monospace;
+}
+
+.conway-page .cw-draft-step.active {
+  color: #f4e8c7;
+
+  border-color: rgba(255, 222, 142, 0.38);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 215, 113, 0.1),
+      rgba(255, 255, 255, 0.03)
+    );
+
+  box-shadow:
+    0 0 17px rgba(255, 204, 91, 0.07);
+}
+
+.conway-page .cw-draft-step.active.blue {
+  border-color: rgba(90, 174, 255, 0.5);
+  color: #b9dcff;
+}
+
+.conway-page .cw-draft-step.active.pink {
+  border-color: rgba(255, 117, 221, 0.5);
+  color: #ffc1ef;
+}
+
+.conway-page .cw-draft-step.active.gold {
+  border-color: rgba(255, 222, 137, 0.55);
+  color: #ffe5a4;
+}
+
+.conway-page .cw-draft-step.done {
+  color: rgba(145, 235, 194, 0.55);
+  border-color: rgba(111, 223, 168, 0.14);
+}
+
+.conway-page .cw-conway-layout {
+  position: absolute;
+  z-index: 20;
+
+  left: 5%;
+  right: 5%;
+  top: 20%;
+  bottom: 5%;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px minmax(0, 1fr);
+  align-items: center;
+  gap: 3%;
+}
+
+.conway-page .cw-board-panel {
+  min-width: 0;
+
+  padding: 13px;
+
+  border: 1px solid rgba(129, 187, 255, 0.16);
+  border-radius: 20px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(8, 30, 68, 0.82),
+      rgba(5, 20, 47, 0.76)
+    );
+
+  box-shadow:
+    0 18px 45px rgba(0, 0, 0, 0.28),
+    inset 0 1px rgba(255, 255, 255, 0.04);
+
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  backdrop-filter: blur(9px);
+}
+
+.conway-page .cw-board-panel-two {
+  border-color: rgba(234, 113, 214, 0.16);
+}
+
+.conway-page .cw-board-panel.is-picking {
+  transform: translateY(-5px) scale(1.01);
+
+  border-color: rgba(255, 224, 147, 0.48);
+
+  box-shadow:
+    0 18px 45px rgba(0, 0, 0, 0.28),
+    0 0 27px rgba(255, 212, 111, 0.08),
+    inset 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.conway-page .cw-board-panel.is-waiting {
+  opacity: 0.44;
+}
+
+.conway-page .cw-board-panel > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 9px;
+}
+
+.conway-page .cw-board-panel > header > div:first-child span {
+  display: block;
+
+  color: rgba(220, 232, 248, 0.5);
+
+  font-size: 7px;
+}
+
+.conway-page .cw-board-panel > header > div:first-child strong {
+  display: block;
+
+  margin-top: 2px;
+
+  color: #9ccfff;
+
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}
+
+.conway-page .cw-board-panel-two > header > div:first-child strong {
+  color: #ff9be1;
+}
+
+.conway-page .cw-board-panel > header > div:last-child {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+
+  padding: 5px 8px;
+
+  border: 1px solid rgba(131, 192, 247, 0.1);
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.conway-page .cw-board-panel > header small {
+  color: rgba(207, 226, 244, 0.42);
+
+  font-size: 6px;
+}
+
+.conway-page .cw-board-panel > header b {
+  color: #eef5ff;
+
+  font:
+    800 13px
+    ui-monospace,
+    monospace;
+}
+
+.conway-page .cw-board {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 5px;
+
+  width: min(100%, 420px);
+  aspect-ratio: 1;
+
+  margin: 0 auto;
+  padding: 8px;
+
+  border: 1px solid rgba(113, 183, 255, 0.13);
+  border-radius: 16px;
+
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(65, 133, 255, 0.06),
+      transparent 62%
+    ),
+    rgba(1, 12, 31, 0.55);
+
+  box-shadow:
+    inset 0 0 30px rgba(67, 136, 255, 0.06);
+}
+
+.conway-page .cw-board-pink {
+  border-color: rgba(237, 100, 215, 0.13);
+
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(222, 70, 207, 0.055),
+      transparent 62%
+    ),
+    rgba(22, 5, 35, 0.45);
+}
+
+.conway-page .cw-board.is-active {
+  box-shadow:
+    inset 0 0 30px rgba(67, 136, 255, 0.07),
+    0 0 22px rgba(255, 216, 120, 0.08);
+}
+
+.conway-page .cw-cell {
+  position: relative;
+
+  aspect-ratio: 1;
+
+  padding: 0;
+
+  border: 1px solid rgba(126, 187, 246, 0.11);
+  border-radius: 7px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(61, 105, 160, 0.08),
+      rgba(20, 46, 83, 0.12)
+    );
+
+  cursor: pointer;
+
+  transition:
+    transform 0.1s ease,
+    border-color 0.1s ease,
+    background 0.1s ease;
+}
+
+.conway-page .cw-board-pink .cw-cell {
+  border-color: rgba(224, 115, 214, 0.1);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(129, 48, 138, 0.08),
+      rgba(67, 23, 83, 0.12)
+    );
+}
+
+.conway-page .cw-cell:hover:not(:disabled) {
+  transform: scale(1.04);
+
+  border-color: rgba(255, 230, 166, 0.45);
+}
+
+.conway-page .cw-cell:disabled {
+  cursor: default;
+}
+
+.conway-page .cw-cell.alive {
+  border-color: rgba(134, 209, 255, 0.64);
+
+  background:
+    radial-gradient(
+      circle,
+      #b8e7ff 0 12%,
+      #58b6ff 16%,
+      #2464d5 44%,
+      #112c68 70%
+    );
+
+  box-shadow:
+    inset 0 0 12px rgba(255, 255, 255, 0.11),
+    0 0 10px rgba(78, 162, 255, 0.25);
+}
+
+.conway-page .cw-board-pink .cw-cell.alive {
+  border-color: rgba(255, 144, 229, 0.64);
+
+  background:
+    radial-gradient(
+      circle,
+      #ffd0f4 0 12%,
+      #ff73d7 16%,
+      #b329a7 44%,
+      #58135b 70%
+    );
+
+  box-shadow:
+    inset 0 0 12px rgba(255, 255, 255, 0.11),
+    0 0 10px rgba(231, 75, 214, 0.25);
+}
+
+.conway-page .cw-cell.alive span {
+  position: absolute;
+  inset: 28%;
+
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  border-radius: 50%;
+}
+
+.conway-page .cw-board-panel > footer {
+  min-height: 36px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+
+  margin-top: 8px;
+}
+
+.conway-page .cw-board-panel > footer > span {
+  color: rgba(205, 224, 244, 0.45);
+
+  font-size: 7px;
+}
+
+.conway-page .cw-board-panel > footer button {
+  min-height: 30px;
+
+  padding: 0 13px;
+
+  border: 1px solid rgba(255, 234, 179, 0.52);
+  border-radius: 9px;
+
+  color: #2a1b0a;
+
+  background:
+    linear-gradient(
+      180deg,
+      #ffeaa8,
+      #d6a247
+    );
+
+  font-size: 8px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.conway-page .cw-conway-core {
+  text-align: center;
+}
+
+.conway-page .cw-life-mark {
+  width: 98px;
+  height: 98px;
+
+  display: grid;
+  place-items: center;
+
+  margin: 0 auto 11px;
+
+  border: 1px solid rgba(255, 222, 145, 0.22);
+  border-radius: 50%;
+
+  color: #f3d58b;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(68, 100, 196, 0.34),
+      rgba(12, 25, 65, 0.88)
+    );
+
+  box-shadow:
+    inset 0 0 30px rgba(126, 145, 255, 0.12),
+    0 0 28px rgba(94, 107, 255, 0.08);
+
+  font:
+    700 50px
+    Georgia,
+    serif;
+}
+
+.conway-page .cw-conway-core > span {
+  display: block;
+
+  color: rgba(194, 218, 245, 0.42);
+
+  font-size: 7px;
+  letter-spacing: 0.2em;
+}
+
+.conway-page .cw-conway-core > strong {
+  display: block;
+
+  margin-top: 5px;
+
+  color: #fff0bd;
+
+  font:
+    800 14px
+    ui-monospace,
+    monospace;
+}
+
+.conway-page .cw-conway-core > small {
+  display: block;
+
+  margin-top: 9px;
+
+  color: rgba(194, 214, 239, 0.36);
+
+  font-size: 7px;
+  line-height: 1.55;
+}
+
+.conway-page .cw-auto-confirm {
+  position: absolute;
+  left: 50%;
+  bottom: 2.2%;
+  z-index: 40;
+
+  transform: translateX(-50%);
+
+  color: rgba(199, 220, 239, 0.34);
+
+  font-size: 6px;
+}
+
+/* =========================================================
+   SUMMARY / MODALS / END
+   ========================================================= */
+
+.conway-page .cw-overlay,
+.conway-page .cw-summary-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 150;
+
+  display: grid;
+  place-items: center;
+
+  padding: 28px;
+
+  background: rgba(1, 8, 21, 0.72);
+
+  backdrop-filter: blur(11px);
+}
+
+.conway-page .cw-summary-overlay {
+  z-index: 120;
+}
+
+.conway-page .cw-rules-modal,
+.conway-page .cw-leave-modal,
+.conway-page .cw-summary-card,
+.conway-page .cw-end-card {
+  position: relative;
+
+  width: min(720px, 90%);
+
+  padding: 28px;
+
+  border: 1px solid rgba(255, 224, 153, 0.22);
+  border-radius: 24px;
+
+  color: #eef4fa;
+
+  background:
+    radial-gradient(
+      circle at 50% 0,
+      rgba(92, 117, 255, 0.12),
+      transparent 42%
+    ),
+    linear-gradient(
+      160deg,
+      rgba(10, 27, 63, 0.99),
+      rgba(5, 17, 42, 0.99)
+    );
+
+  box-shadow:
+    0 27px 80px rgba(0, 0, 0, 0.5);
+}
+
+.conway-page .cw-summary-card {
+  width: min(700px, 90%);
+  text-align: center;
+}
+
+.conway-page .cw-leave-modal {
+  width: min(470px, 88%);
+  text-align: center;
+}
+
+.conway-page .cw-summary-kicker {
+  display: block;
+
+  color: #91c5ef;
+
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+}
+
+.conway-page .cw-rules-modal h2,
+.conway-page .cw-leave-modal h2,
+.conway-page .cw-summary-card h2 {
+  margin: 8px 0 14px;
+
+  color: #ffebb5;
+
+  font:
+    700 clamp(25px, 2.15vw, 36px)
+    Georgia,
+    serif;
+}
+
+.conway-page .cw-leave-modal > p {
+  color: rgba(210, 229, 242, 0.62);
+
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.conway-page .cw-close-button {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+
+  width: 34px;
+  height: 34px;
+
+  padding: 0;
+
+  border: 1px solid rgba(255, 224, 153, 0.18);
+  border-radius: 50%;
+
+  color: #f4e9cf;
+  background: rgba(255, 255, 255, 0.04);
+
+  cursor: pointer;
+}
+
+.conway-page .cw-rules-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+
+  margin-top: 20px;
+}
+
+.conway-page .cw-rules-grid article {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 12px;
+
+  min-height: 96px;
+
+  padding: 14px;
+
+  border: 1px solid rgba(139, 194, 244, 0.1);
+  border-radius: 14px;
+
+  background: rgba(255, 255, 255, 0.024);
+}
+
+.conway-page .cw-rules-grid article > b {
+  color: #e5bf74;
+
+  font-size: 11px;
+}
+
+.conway-page .cw-rules-grid strong {
+  display: block;
+
+  color: #fff0bd;
+
+  font-size: 12px;
+}
+
+.conway-page .cw-rules-grid p {
+  margin: 5px 0 0;
+
+  color: rgba(207, 232, 237, 0.61);
+
+  font-size: 9px;
+  line-height: 1.58;
+}
+
+.conway-page .cw-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+
+  margin: 18px 0;
+}
+
+.conway-page .cw-summary-grid article {
+  padding: 17px;
+
+  border: 1px solid rgba(126, 191, 249, 0.14);
+  border-radius: 16px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(33, 87, 144, 0.11),
+      rgba(255, 255, 255, 0.02)
+    );
+}
+
+.conway-page .cw-summary-grid article.cw-summary-pink {
+  border-color: rgba(236, 117, 218, 0.14);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(139, 49, 137, 0.11),
+      rgba(255, 255, 255, 0.02)
+    );
+}
+
+.conway-page .cw-summary-grid article > span {
+  display: block;
+
+  margin-bottom: 11px;
+
+  color: #fff0bd;
+
+  font:
+    700 14px
+    Georgia,
+    serif;
+}
+
+.conway-page .cw-summary-grid article > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+
+  gap: 10px;
+
+  padding: 7px 0;
+
+  border-bottom: 1px solid rgba(219, 233, 247, 0.06);
+}
+
+.conway-page .cw-summary-grid small {
+  color: rgba(209, 228, 242, 0.45);
+
+  font-size: 8px;
+}
+
+.conway-page .cw-summary-grid strong {
+  color: #eef5ff;
+
+  font:
+    800 14px
+    ui-monospace,
+    monospace;
+}
+
+.conway-page .cw-summary-grid footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-top: 10px;
+  padding-top: 8px;
+}
+
+.conway-page .cw-summary-grid footer strong {
+  color: #f3d277;
+
+  font-size: 20px;
+}
+
+.conway-page .cw-primary-button,
+.conway-page .cw-secondary-button {
+  min-height: 46px;
+
+  padding: 0 18px;
+
+  border-radius: 13px;
+
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.conway-page .cw-primary-button {
+  border: 1px solid rgba(255, 235, 181, 0.68);
+
+  color: #2d1d0a;
+
+  background:
+    linear-gradient(
+      180deg,
+      #ffedaf,
+      #d7a446
+    );
+}
+
+.conway-page .cw-secondary-button {
+  border: 1px solid rgba(135, 208, 225, 0.23);
+
+  color: #e0f0f3;
+
+  background: rgba(8, 40, 59, 0.7);
+}
+
+.conway-page .cw-summary-card > .cw-primary-button {
+  width: 100%;
+}
+
+.conway-page .cw-modal-actions,
+.conway-page .cw-end-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+
+  margin-top: 18px;
+}
+
+.conway-page .cw-end-screen {
+  position: absolute;
+  inset: 0;
+
+  display: grid;
+  place-items: center;
+
+  background:
+    radial-gradient(
+      circle at 50% 46%,
+      rgba(99, 109, 255, 0.14),
+      transparent 34%
+    ),
+    linear-gradient(
+      180deg,
+      #06122e,
+      #081a3a
+    );
+}
+
+.conway-page .cw-end-card {
+  width: min(570px, 88%);
+
+  text-align: center;
+}
+
+.conway-page .cw-trophy {
+  width: 82px;
+  height: 82px;
+
+  display: grid;
+  place-items: center;
+
+  margin: 12px auto;
+
+  border: 1px solid rgba(255, 225, 153, 0.45);
+  border-radius: 50%;
+
+  color: #ffe297;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(65, 95, 177, 0.58),
+      rgba(10, 27, 66, 0.96)
+    );
+
+  font-size: 32px;
+}
+
+.conway-page .cw-end-card h1 {
+  margin: 7px 0 4px;
+
+  color: #ffebb6;
+
+  font:
+    800 clamp(31px, 2.8vw, 48px)
+    Georgia,
+    serif;
+}
+
+.conway-page .cw-end-card > p {
+  margin: 0;
+
+  color: rgba(207, 228, 242, 0.48);
+
+  font-size: 9px;
+}
+
+.conway-page .cw-final-score {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  gap: 22px;
+
+  margin: 18px 0;
+
+  color: #f4f1e5;
+}
+
+.conway-page .cw-final-score strong {
+  font:
+    800 clamp(42px, 4.1vw, 68px)
+    ui-monospace,
+    monospace;
+}
+
+.conway-page .cw-final-score span {
+  color: rgba(205, 222, 240, 0.28);
+
+  font-size: 30px;
+}
+
+/* =========================================================
+   ANIMATION
+   ========================================================= */
+
+@keyframes cwEntryMove {
+  0% {
+    transform:
+      scale(1.02)
+      translate(-0.35%, -0.25%);
+  }
+
+  100% {
+    transform:
+      scale(1.045)
+      translate(0.35%, 0.25%);
+  }
+}
+
+@keyframes cwIslandFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-13px);
+  }
+}
+
+@keyframes cwCountdownPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 12px rgba(255, 191, 54, 0.06);
+  }
+
+  50% {
+    box-shadow: 0 0 25px rgba(255, 191, 54, 0.2);
+  }
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 980px) {
+  .conway-page .cw-table-shell {
+    left: 8.5%;
+    right: 8.5%;
+  }
+
+  .conway-page .cw-power-panel {
+    width: 43%;
+  }
+
+  .conway-page .cw-conway-layout {
+    grid-template-columns:
+      minmax(0, 1fr)
+      118px
+      minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .conway-page .cw-frame {
+    width: 100vw;
+    height: 100vh;
+
+    aspect-ratio: auto;
+  }
+
+  .conway-page .cw-entry-topbar {
+    top: 70px;
+    left: 14px;
+    right: 14px;
+  }
+
+  .conway-page .cw-entry-layout {
+    inset: 145px 20px 24px;
+
+    grid-template-columns: 1fr;
+
+    overflow: auto;
+  }
+
+  .conway-page .cw-entry-copy {
+    padding: 20px 0 0;
+
+    margin-inline: auto;
+
+    text-align: center;
+  }
+
+  .conway-page .cw-entry-copy > p {
+    margin-inline: auto;
+  }
+
+  .conway-page .cw-entry-start {
+    margin-inline: auto;
+  }
+
+  .conway-page .cw-entry-island {
+    min-height: 310px;
+  }
+
+  .conway-page .cw-match-hud {
+    left: 8px;
+    right: 8px;
+    top: 8px;
+
+    grid-template-columns: auto 1fr auto 1fr;
+
+    min-height: 62px;
+
+    padding: 7px;
+  }
+
+  .conway-page .cw-score-center {
+    display: none;
+  }
+
+  .conway-page .cw-score-box {
+    grid-template-columns: 1fr auto;
+  }
+
+  .conway-page .cw-score-box > small {
+    display: none;
+  }
+
+  .conway-page .cw-table-shell {
+    left: 4%;
+    right: 4%;
+    top: 13%;
+    bottom: 25%;
+  }
+
+  .conway-page .cw-power-panel {
+    width: 46%;
+    bottom: 2%;
+  }
+
+  .conway-page .cw-power-left {
+    left: 2%;
+  }
+
+  .conway-page .cw-power-right {
+    right: 2%;
+  }
+
+  .conway-page .cw-drag-tip {
+    min-width: 78%;
+    bottom: -12%;
+  }
+
+  .conway-page .cw-keyboard-hint {
+    display: none;
+  }
+
+  .conway-page .cw-draft-flow {
+    width: 88%;
+  }
+
+  .conway-page .cw-conway-layout {
+    left: 3%;
+    right: 3%;
+    top: 20%;
+    bottom: 4%;
+
+    grid-template-columns: 1fr 1fr;
+    gap: 2%;
+  }
+
+  .conway-page .cw-conway-core {
+    display: none;
+  }
+
+  .conway-page .cw-board-panel {
+    padding: 8px;
+  }
+
+  .conway-page .cw-board {
+    gap: 3px;
+    padding: 5px;
+  }
+
+  .conway-page .cw-rules-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .conway-page *,
+  .conway-page *::before,
+  .conway-page *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
