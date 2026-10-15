@@ -91,11 +91,8 @@ export default function App() {
   const [authorizedGame, setAuthorizedGame] = useState(null);
   const {
     pendingSubmission,
-    pendingSubmissions,
     resultRevision,
-    setActiveSubmission,
-    updatePlayer,
-    submitPlayer,
+    requestClaim,
   } = useScoreRecording();
   const [postGameOpen, setPostGameOpen] = useState(false);
   const seenResultRevision = useRef(resultRevision);
@@ -136,11 +133,8 @@ export default function App() {
     <PostGameSubmission
       key={pendingSubmission.attemptId}
       submission={pendingSubmission}
-      onUpdatePlayer={updatePlayer}
-      onSubmitPlayer={submitPlayer}
+      requestClaim={requestClaim}
       onReturnHome={dismissPostGame}
-      pendingSubmissions={pendingSubmissions}
-      onResumeSubmission={setActiveSubmission}
     />
   ) : null;
 

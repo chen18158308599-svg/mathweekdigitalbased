@@ -1,55 +1,35 @@
-# React + Vite
+# Math Week digital games
 
-## Game PIN prototype
+React + Vite. Players play first, then scan a per-result QR with their phone and sign in on the Math Week leaderboard to claim their final score.
 
-The seven game PINs are configured as strings in `src/config/gameAccess.js`.
-This frontend-only gate is a prototype, not secure authentication: the PINs
-are included in the JavaScript bundle and can be inspected or bypassed by users.
-A production access-control system must verify PINs on a trusted server.
+## Run and verify
 
-Players enter a game after PIN verification and its introduction; registration is not
-required before gameplay. When a result is finalized, the shared post-game form collects
-the player's username and Student ID. Pending results and entered identities are retained
-in browser storage for safe retries. On submission, the client calls `register` and then
-`score` through the same-origin `/api/mathverse` route, validates each response's `ok`,
-`status`, and `row`, and confirms both responses refer to the same sheet row before
-showing success. Conway and Planarity use separate sessions and rows for their two players.
-Failed submissions remain available for retry; completed records are cleared when returning
-home.
-
-Average Game sends the player's selected integer (0–100) through the same post-game form
-and stores that number in the Average sheet's `score` column. It does not submit the
-eventual competition score through this flow; that result remains pending.
-
-## Server-only Google Apps Script proxy
-
-Copy `.env.example` to `.env.local` for local development and set:
-
-```text
-MATHVERSE_API_KEY=the_server_side_key
+```
+npm ci
+npm run dev
+npm run build
+npm run test:scoring
+npm run test:leaderboard
 ```
 
-Never use a `VITE_` prefix. Vite exposes `VITE_` values to browser bundles. The local Vite
-server handles `/api/mathverse` without exposing the key. For production, deploy the full
-repository to Vercel (not only `dist/`) and add `MATHVERSE_API_KEY` to the project environment;
-`api/mathverse.js` is the matching serverless function. A static-only host cannot keep this
-key secret and therefore is not compatible without an equivalent server-side route.
+The new production scoring path does not use Google Sheets, typed names/student IDs, or `/api/mathverse`. The old proxy and `test:integration` remain for legacy compatibility only.
 
-The proxy follows Google Apps Script redirects, validates allowed actions/game IDs, requires
-`ok`, `status`, and `row` in successful responses, and never sends the API key to the browser.
-Client-generated scores remain non-authoritative and can still be tampered with by a user.
+## Paired deployment
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Deploy this repo and the updated `Math-Week-Leaderboard` repo together. Apply the leaderboard migration `0010_digital_result_claims.sql` first, then configure `digital_key` for each of the seven digital game rows in `/admin/games`. Verify enabled flags and date windows against the current event schedule; old seed dates are outdated.
 
-Currently, two official plugins are available:
+Games must be opened inside the leaderboard `/games` iframe to claim. Opening this game site by itself supports gameplay but cannot issue claim tokens. The host owns its display authorization cookie and calls its own same-origin API; no Supabase token or service credential enters this game.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Default parent origin: `https://math-week-leaderboard.vercel.app`. For local development set `VITE_LEADERBOARD_ORIGIN=http://localhost:3000` before starting Vite. Also set the leaderboard `NEXT_PUBLIC_DIGITAL_GAME_URL` to the local Vite origin. Production defaults still point to the existing Render game deployment.
 
-## React Compiler
+Each final result sends its stable attempt ID, game key, player slot, exact integer final score, outcome and finalization time. The host returns a generated QR, expiry and claim status. Conway and Planarity have independent p1/p2 claims. Normal games scale the raw final score to 0-19 claim points using per-game targets on the leaderboard server and in the database, including partial-progress/loss scores, exactly once per school account per game (existing leaderboard policy). The original scoring formulas are preserved.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Average sends the chosen integer 0-100, associates it with the claiming account, and stores a zero-point pending result. It does not interpret the choice as points. Final competition settlement remains an organizer action; no new winning/settlement rule is invented here.
 
-## Expanding the Oxlint configuration
+QR codes last 60 seconds. A retry reuses the same unclaimed result; an expired QR cannot be renewed or claimed. The game returns home at expiry. Claimed results cannot be reissued. Unclaimed results are retained in this browser tab (up to 30 recent attempts), without storing student identities. There is no resume-results prompt.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+The kiosk integration validates message origin and iframe source, display authorization, game registration, event window, result shape and duplicate identity. Scores are still produced by client gameplay, not a server replay engine; this change does not add authoritative anti-cheat validation.
+
+Legacy per-game PINs remain in `src/config/gameAccess.js`. They are a frontend convenience, not secure authentication.
+
+Apply leaderboard migration 0012_digital_points_scaling.sql after 0010 and 0011. The result panel distinguishes GAME SCORE from CLAIM POINTS (MAX 19). Existing awarded submissions are preserved.

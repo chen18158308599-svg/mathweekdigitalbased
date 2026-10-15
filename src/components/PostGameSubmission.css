@@ -227,3 +227,10 @@
     grid-template-columns: 1fr;
   }
 }
+
+.claim-qr { display: block; width: min(100%, 248px); height: auto; margin: auto; padding: 10px; background: white; border-radius: 8px; }
+.post-game-player a { color: #fff0bd; }
+
+
+.claim-link { display: grid; place-items: center; min-height: 44px; padding: 10px; border: 1px solid #f4d991; border-radius: 7px; text-align: center; }
+.claim-url { overflow-wrap: anywhere; font-size: 12px; }

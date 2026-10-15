@@ -1,183 +1,54 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GAME_ACCESS } from "../config/gameAccess.js";
+import { LEADERBOARD_ORIGIN } from "../integration/useScoreRecording.js";
 import "./PostGameSubmission.css";
-
-function PlayerForm({
-  slot,
-  player,
-  result,
-  isAverage,
-  showSavedConfirmation,
-  onChange,
-  onSubmit,
-}) {
-  const [submitting, setSubmitting] = useState(false);
-  const saved = player.state === "submitted";
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    if (submitting || saved) return;
-    setSubmitting(true);
-    try {
-      await onSubmit(slot, {
-        username: player.username.trim(),
-        studentId: player.studentId.trim(),
-      });
-    } catch (error) {
-      console.error(`Post-game score submission failed for ${slot}:`, error);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  function handleChange(field, value) {
-    onChange(slot, {
-      username: field === "username" ? value : player.username,
-      studentId: field === "studentId" ? value : player.studentId,
-    });
-  }
-
-  return (
-    <form className="post-game-player" onSubmit={handleSubmit}>
-      {slot !== "single" && <h2>PLAYER {slot === "p1" ? "1" : "2"}</h2>}
-      <div className="post-game-result-line">
-        <span>{isAverage ? "CHOSEN NUMBER" : `${result.outcome.toUpperCase()} · FINAL SCORE`}</span>
-        <strong>{result.finalScore}</strong>
-      </div>
-      {saved ? (
-        showSavedConfirmation ? (
-          <p className="post-game-saved" role="status">
-            SAVED SUCCESSFULLY
-          </p>
-        ) : null
-      ) : (
-        <>
-          <label>
-            <span>USERNAME</span>
-            <input
-              type="text"
-              autoComplete="off"
-              maxLength={40}
-              required
-              disabled={submitting || player.identityLocked}
-              value={player.username}
-              onChange={(event) => handleChange("username", event.target.value)}
-            />
-          </label>
-          <label>
-            <span>STUDENT ID</span>
-            <input
-              type="text"
-              inputMode="text"
-              autoComplete="off"
-              maxLength={20}
-              required
-              disabled={submitting || player.identityLocked}
-              value={player.studentId}
-              onChange={(event) => handleChange("studentId", event.target.value)}
-            />
-          </label>
-          {player.error && (
-            <p className="post-game-error" role="alert">
-              {player.error.message || "Could not save. Please retry."}
-            </p>
-          )}
-          <button type="submit" disabled={submitting}>
-            {submitting ? "SAVING..." : "SUBMIT SCORE"}
-          </button>
-        </>
-      )}
-    </form>
-  );
+function PlayerClaim({ submission, slot, requestClaim }) {
+  const player = submission.players[slot];
+  const result = submission.results[slot];
+  const { attemptId, localGameId } = submission;
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    requestClaim({ attemptId, localGameId, results: { [slot]: result } }, slot);
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [attemptId, localGameId, result, slot, requestClaim]);
+  const expired = player.expiresAt && Date.parse(player.expiresAt) <= now;
+  return <section className="post-game-player">
+    {slot !== "single" && <h2>PLAYER {slot === "p1" ? "1" : "2"}</h2>}
+    <div className="post-game-result-line"><span>{submission.localGameId === "average" ? "CHOSEN NUMBER" : "GAME SCORE"}</span><strong>{result.finalScore}</strong></div>
+    {localGameId !== "average" && <div className="post-game-result-line"><span>CLAIM POINTS (MAX 19)</span><strong>{Number.isInteger(player.pointsAwarded) ? player.pointsAwarded : "..."}</strong></div>}
+    {player.state === "claimed" ? <p className="post-game-saved" role="status">{submission.localGameId === "average" ? "NUMBER SAVED - RESULTS PENDING" : `${player.pointsAwarded} POINTS CLAIMED`}</p> : <>
+      {player.qrDataUrl && !expired && <>
+        <img className="claim-qr" src={player.qrDataUrl} width="248" height="248" alt="Scan to sign in and claim this result" />
+        <p>Scan the QR or open the link below. Sign in with your school account to confirm.</p>
+        {player.claimUrl && <>
+          <a className="claim-link" href={player.claimUrl} target="_blank" rel="noopener noreferrer">OPEN CLAIM PAGE ON THIS COMPUTER</a>
+          <a className="claim-url" href={player.claimUrl} target="_blank" rel="noopener noreferrer">{player.claimUrl}</a>
+        </>}
+        <p>{Math.max(0, Math.ceil((Date.parse(player.expiresAt) - now) / 1000))}s remaining</p>
+      </>}
+      {submission.localGameId === "average" && <p>Your number will be saved to your account. Points are pending the final competition result.</p>}
+      {(player.error || expired) && <p className="post-game-error" role="alert">{expired ? "This result has expired." : player.error}</p>}
+      {window.parent === window && <p>Open this game from <a href={`${LEADERBOARD_ORIGIN}/games`}>Math Week Digital Games</a> to claim points.</p>}
+      {!expired && player.state !== "expired" && <button onClick={() => requestClaim(submission, slot)}>LOAD / RETRY QR</button>}
+    </>}
+  </section>;
 }
-
-export default function PostGameSubmission({
-  submission,
-  onUpdatePlayer,
-  onSubmitPlayer,
-  onReturnHome,
-  pendingSubmissions,
-  onResumeSubmission,
-}) {
-  const allSaved = submission.requiredSlots.every(
-    (slot) => submission.players[slot].state === "submitted"
-  );
-  const isAverage = submission.localGameId === "average";
-  const otherPendingSubmissions = pendingSubmissions.filter(
-    (item) => item.attemptId !== submission.attemptId
-  );
-
-  return (
-    <main className="post-game-submission">
-      <section className="post-game-card" aria-labelledby="post-game-title">
-        <span className="post-game-eyebrow">
-          {GAME_ACCESS[submission.localGameId]?.name}
-        </span>
-        <h1 id="post-game-title">POST-GAME REGISTRATION</h1>
-        {otherPendingSubmissions.length > 0 && (
-          <details className="post-game-pending">
-            <summary>OTHER UNSAVED RESULTS</summary>
-            <div className="post-game-pending__list">
-              {otherPendingSubmissions.map((item) => (
-                <button
-                  key={item.attemptId}
-                  type="button"
-                  onClick={() => onResumeSubmission(item.attemptId)}
-                >
-                  <span>{GAME_ACCESS[item.localGameId]?.name ?? "Game result"}</span>
-                  <strong>RESUME</strong>
-                </button>
-              ))}
-            </div>
-          </details>
-        )}
-        <div className="post-game-player-list">
-          {submission.requiredSlots.map((slot) => (
-            <PlayerForm
-              key={slot}
-              slot={slot}
-              player={submission.players[slot]}
-              result={submission.results[slot]}
-              isAverage={isAverage}
-              showSavedConfirmation={submission.requiredSlots.length === 2}
-              onChange={(playerSlot, player) =>
-                onUpdatePlayer(submission.attemptId, playerSlot, player)
-              }
-              onSubmit={(playerSlot, player) =>
-                onSubmitPlayer(submission.attemptId, playerSlot, player)
-              }
-            />
-          ))}
-        </div>
-        {allSaved ? (
-          <>
-            <p className="post-game-complete" role="status">
-              SAVED SUCCESSFULLY
-            </p>
-            <div className="post-game-actions">
-              <button type="button" onClick={onReturnHome}>
-                RETURN HOME
-              </button>
-              <button type="button" onClick={onReturnHome}>
-                PLAY AGAIN
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="post-game-note">
-              {submission.requiredSlots.length === 2
-                ? "Both player scores must be saved to complete this match."
-                : "Your finalized result is retained for a safe retry."}
-            </p>
-            <div className="post-game-actions post-game-actions--pending">
-              <button type="button" onClick={onReturnHome}>
-                RETURN HOME
-              </button>
-            </div>
-          </>
-        )}
-      </section>
-    </main>
-  );
+export default function PostGameSubmission({ submission, onReturnHome, requestClaim }) {
+  useEffect(() => {
+    const checkExpiry = () => {
+      if (submission.requiredSlots.some(slot => {
+        const player = submission.players[slot];
+        return player.state === "expired" || (player.expiresAt && Date.parse(player.expiresAt) <= Date.now());
+      })) onReturnHome();
+    };
+    checkExpiry();
+    const timer = setInterval(checkExpiry, 250);
+    return () => clearInterval(timer);
+  }, [submission, onReturnHome]);
+  return <main className="post-game-submission"><section className="post-game-card">
+    <span className="post-game-eyebrow">{GAME_ACCESS[submission.localGameId]?.name}</span><h1>CLAIM YOUR RESULT</h1>
+    <div className="post-game-player-list">{submission.requiredSlots.map(slot => <PlayerClaim key={slot} submission={submission} slot={slot} requestClaim={requestClaim} />)}</div>
+    <div className="post-game-actions"><button onClick={onReturnHome}>RETURN HOME</button></div>
+  </section></main>;
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPlayerSessionId } from "../../integration/mathverseApi.js";
+import { createAttemptId } from "../../scoring/competitionScoring.js";
 import "./AverageGame.css";
 import skyBackground from "../../assets/home-layers/background.png";
 import averagePortal from "../../assets/home-layers/average.png";
@@ -32,14 +32,14 @@ const text = {
     keyHint: "← / → ±1  ·  Shift ±10",
     complete: "LOCKED",
     completeTitle: "Number Locked",
-    completeSub: "Save your details next.",
+    completeSub: "Scan the QR code to save your number.",
     result: "Results after the challenge.",
     yourNumber: "YOUR PICK",
     newPlayer: "New Player",
     guideTitle: "The Rule",
     guide1: "Pick one number: 0–100.",
     guide2: "Closest to the target wins.",
-    guide3: "Save your details after playing.",
+    guide3: "Scan the QR code after playing.",
     guideNote: "Results after the challenge.",
     target: "TARGET",
   },
@@ -110,7 +110,7 @@ export default function AverageGame() {
   // Shared Player Registration has already created the first player's row.
   // Average also has an in-game NEW PLAYER flow: that flow must create a
   // *different* session, rather than silently sending it to the old endpoint.
-  const averageAttemptRef = useRef(createPlayerSessionId());
+  const averageAttemptRef = useRef(createAttemptId("average"));
   const t = text[language];
   const nameOk = name.trim().length > 0;
   const idOk = studentId.trim().length > 0;
@@ -128,7 +128,7 @@ export default function AverageGame() {
     window.dispatchEvent(
       new CustomEvent("mathweek:average-result", {
         detail: {
-          attemptId: `average-${averageAttemptRef.current}`,
+          attemptId: averageAttemptRef.current,
           playerSlot: "single",
           finalScore: number,
           outcome: "completed",
@@ -146,7 +146,7 @@ export default function AverageGame() {
     setNumber(50);
     setSubmitting(false);
     setTouched({ name: false, id: false });
-    averageAttemptRef.current = createPlayerSessionId();
+    averageAttemptRef.current = createAttemptId("average");
   };
   useEffect(() => {
     if (stage !== 2 || submitting) return undefined;
