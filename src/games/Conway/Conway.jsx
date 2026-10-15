@@ -1,38 +1,33 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import {
+
+  calculateConwayScore,
+
+  createCompetitionAttempt,
+
+  isConwayMatchWon,
+
+} from "../../scoring/competitionScoring.js";
+
 import "./Conway.css";
-
-
 
 import homeBackground from "../../assets/home-layers/background.png";
 
 import conwayIsland from "../../assets/home-layers/conway.png";
 
-
-
 const GRID = 8;
 
 const MAX_CELLS = 10;
 
-
-
-const MATCH_TARGET = 21;
-
-const MATCH_CAP = 30;
-
-
-
-const TABLE_PHASE_SECONDS = 30;
-
-
-
 const CONWAY_READY_SECONDS = 5;
+
+// Each full 30 seconds of table play starts a new Conway round.
+const CONWAY_REENTRY_SECONDS = 30;
 
 const CONWAY_PICK_SECONDS = 10;
 
 const CONWAY_EVOLVE_SECONDS = 20;
-
-
 
 const MIN_BALL_SPEED = 0.026;
 
@@ -40,3390 +35,2865 @@ const BASE_MAX_BALL_SPEED = 0.050;
 
 const CAP_STEP = 0.008;
 
-
-
 const POWER_SKILL_COST = 1;
-
-
 
 const PADDLE_RADIUS_X = 5.0;
 
 const PADDLE_RADIUS_Y = 9.5;
 
-
-
 const COPY = {
 
-  zh: {
+  zh: {
 
-    eyebrow: "MATH WEEK 2026 · 双人策略竞技",
+    eyebrow: "MATH WEEK 2026",
 
-    title: "Conway 乒乓对决",
+    title: "Conway 乒乓对决",
 
-    englishTitle: "TABLE TENNIS × GAME OF LIFE",
+    englishTitle: "TABLE TENNIS × GAME OF LIFE",
 
-    badge: "滑动挥拍 · 力道系统 · 征召式 Conway",
+    badge: "2 人 · 双阶段挑战",
 
-    intro:
+    intro:
 
-      "两名玩家用手指直接拖动球拍。挥拍速度会决定回球力道，力道越高，球飞得越快，但速度始终受最低与最高上限控制。",
+      "先培养细胞赚取技能，再用球拍决胜。乒乓对战每 30 秒进入一次 Conway。",
 
-    intro2:
+    intro2:
 
-      "每 30 秒强制暂停乒乓球并进入 Conway。5 秒准备后，左侧玩家先部署，再轮到右侧玩家，之后双方棋盘一起演化。",
+      "先得 9 分且领先 2 分获胜 · 12 分封顶",
 
-    start: "开始比赛",
+    start: "开始比赛",
 
-    guide: "玩法",
+    guide: "玩法",
 
-    language: "中/EN",
+    language: "中/EN",
 
+    p1: "玩家 1",
 
+    p2: "玩家 2",
 
-    p1: "玩家 1",
+    score: "比分",
 
-    p2: "玩家 2",
+    skillPoints: "技能点",
 
-    score: "比分",
+    rally: "回合",
 
-    skillPoints: "技能点",
+    conway: "CONWAY",
 
-    rally: "回合",
+    seconds: "秒",
 
-    conway: "CONWAY",
+    serve: "发球",
 
-    seconds: "秒",
+    dragTitle: "滑动球拍",
 
-    serve: "发球",
+    dragText: "拖动移动 · 挥得越快，球速越快",
 
+    keyboard1: "P1：WASD",
 
+    keyboard2: "P2：方向键",
 
-    dragTitle: "滑动球拍",
+    force: "力道",
 
-    dragText: "按住自己的半场自由滑动；挥拍越快，击球力道越高",
+    forceLow: "轻",
 
-    keyboard1: "P1：WASD",
+    forceHigh: "重",
 
-    keyboard2: "P2：方向键",
+    forceCap: "球速上限",
 
+    capLevel: "等级",
 
+    upgradeCap: "提高球速上限",
 
-    force: "力道",
+    needPoint: "技能点不足",
 
-    forceLow: "轻",
+    upgraded: "力道上限提升",
 
-    forceHigh: "重",
+    onlySkill: "消耗 1 ✦",
 
-    forceCap: "力道上限",
+    readyTitle: "康威生命游戏",
 
-    capLevel: "上限等级",
+    readyText: "放置细胞 → 观察演化 → 获得 ✦",
 
-    upgradeCap: "提升力道上限",
-    needPoint: "技能点不足",
+    p1PickTitle: "玩家 1 · 选择细胞",
 
-    upgraded: "力道上限提升",
+    p2PickTitle: "玩家 2 · 选择细胞",
 
-    onlySkill: "唯一技能",
+    pickText: "点击棋格，最多放置 10 个细胞",
 
+    waiting: "等待",
 
+    confirm: "确认部署",
 
-    conwayIncoming: "时间到 · 强制进入 Conway",
+    autoConfirm: "",
 
-    readyTitle: "Conway 准备阶段",
+    evolveTitle: "细胞演化中",
 
-    readyText: "双方准备 · 5 秒后开始部署",
+    evolveText: "观察存活情况，获得技能点",
 
-    p1PickTitle: "玩家 1 部署",
+    cells: "活细胞",
 
-    p2PickTitle: "玩家 2 部署",
+    placed: "已放置",
 
-    pickText: "最多选择 10 个初始细胞",
+    aliveTime: "存活时间",
 
-    waiting: "等待对方部署",
+    rule:
 
-    confirm: "确认部署",
+      "每存活 5 秒 +1 ✦ · 结束时 ≥3 个细胞再 +1 ✦",
 
-    autoConfirm: "时间结束自动确认",
+    challengeDone: "获得技能点",
 
-    evolveTitle: "生命演化",
+    survival: "存活",
 
-    evolveText: "双方棋盘同时演化 20 秒",
+    finalCells: "最终细胞",
 
-    cells: "活细胞",
+    bonus: "结束奖励",
 
-    placed: "已放置",
+    gained: "获得",
 
-    aliveTime: "存活时间",
+    resume: "开始乒乓球",
 
-    rule:
+    matchOver: "比赛结束",
 
-      "每存活 5 秒 +1 技能点；20 秒结束仍有至少 3 个活细胞再 +1；每轮最多 5 点",
+    wins: "获胜",
 
-    challengeDone: "Conway 挑战完成",
+    finalScore: "比赛比分",
 
-    survival: "存活",
+    playAgain: "返回 MATHVERSE",
 
-    finalCells: "最终细胞",
+    backEntrance: "返回 MATHVERSE",
 
-    bonus: "结束奖励",
+    pauseTitle: "返回游戏入口？",
 
-    gained: "获得",
+    pauseText: "当前比分、技能点与力道上限不会保留。",
 
-    resume: "回到乒乓球",
+    stay: "继续比赛",
 
+    leave: "结束比赛",
 
+    howTo: "快速玩法",
 
-    matchOver: "比赛结束",
+    step1: "选择细胞",
 
-    wins: "获胜",
+    step1Text:
 
-    finalScore: "最终比分",
+      "玩家 1、玩家 2 依次点击棋格，各选最多 10 个。",
 
-    playAgain: "再来一局",
+    step2: "存活得分",
 
-    backEntrance: "返回游戏入口",
+    step2Text:
 
+      "演化 20 秒：每存活 5 秒 +1 ✦；剩余 3 个再 +1 ✦。",
 
+    step3: "挥拍对战",
 
-    pauseTitle: "返回游戏入口？",
+    step3Text:
 
-    pauseText: "当前比分、技能点与力道上限不会保留。",
+      "各控制自己的半场；挥拍越快，回球越快。",
 
-    stay: "继续比赛",
+    step4: "升级与胜利",
 
-    leave: "结束比赛",
+    step4Text:
 
+      "花 ✦ 提升球速。先得 9 分并领先 2 分获胜，12 分封顶。",
 
+    step5: "胜利",
 
-    howTo: "玩法说明",
+    step5Text:
 
-    step1: "真正滑动球拍",
+      "先得 9 分并领先 2 分，12 分封顶。",
 
-    step1Text:
+    flowPick: "放置",
 
-      "P1 只控制左半场，P2 只控制右半场。球拍会跟随手指的 X/Y 位置，不需要额外击球按钮。",
+    flowEarn: "获得技能",
 
-    step2: "力道决定球速",
+    flowPlay: "乒乓对战",
 
-    step2Text:
+    phaseIntro: "双方各放最多 10 个细胞。存活 20 秒，赚取 ✦。",
 
-      "挥拍速度会转换成 0–100% 力道，再映射到球速。即使轻碰也有最低球速，重击也不会超过你的当前力道上限。",
+    lifeRule: "2–3 个邻居则存活 · 恰好 3 个邻居会诞生新细胞",
 
-    step3: "30 秒强制切换",
+  },  en: {
 
-    step3Text:
+    eyebrow: "MATH WEEK 2026",
 
-      "乒乓球阶段固定 30 秒。倒计时到 0 时会立即冻结球桌，并让两名玩家一起进入 Conway，不等待当前回合结束。",
+    title: "Conway Table Tennis",
 
-    step4: "征召式 Conway",
+    englishTitle: "TABLE TENNIS × GAME OF LIFE",
 
-    step4Text:
+    badge: "2 PLAYERS · 2 PHASES",
 
-      "先准备 5 秒，再由玩家 1 单独部署 10 秒，然后玩家 2 部署 10 秒，最后双方棋盘同时演化 20 秒。",
+    intro:
 
-    step5: "唯一技能：力道上限",
+      "Grow cells for power, then play table tennis. Conway returns every 30s of table play.",
 
-    step5Text:
+    intro2:
 
-      "技能点只能由 Conway 获得。每花 1 点可永久提高本局的最大击球速度；力道上限可以持续升级，没有等级上限。",
+      "First to 9 · Win by 2 · Cap 12",
 
-  },
+    start: "Start Match",
 
+    guide: "Guide",
 
+    language: "中/EN",
 
-  en: {
+    p1: "Player 1",
 
-    eyebrow: "MATH WEEK 2026 · TWO-PLAYER STRATEGY",
+    p2: "Player 2",
 
-    title: "Conway Table Tennis",
+    score: "Score",
 
-    englishTitle: "TABLE TENNIS × GAME OF LIFE",
+    skillPoints: "Skill Points",
 
-    badge: "SWIPE · FORCE SYSTEM · DRAFT-STYLE CONWAY",
+    rally: "Rally",
 
-    intro:
+    conway: "CONWAY",
 
-      "Both players drag their paddles directly. Swipe speed becomes hitting force: stronger swings produce faster shots, bounded by a minimum and your current maximum speed.",
+    seconds: "sec",
 
-    intro2:
+    serve: "Serve",
 
-      "Every 30 seconds, table tennis is forcibly paused for Conway. After a 5-second ready phase, Player 1 drafts cells first, then Player 2, then both boards evolve together.",
+    dragTitle: "DRAG PADDLE",
 
-    start: "Start Match",
+    dragText: "Drag to move · Swipe faster for stronger shots",
 
-    guide: "Guide",
+    keyboard1: "P1: WASD",
 
-    language: "中/EN",
+    keyboard2: "P2: Arrow keys",
 
+    force: "Force",
 
+    forceLow: "Soft",
 
-    p1: "Player 1",
+    forceHigh: "Hard",
 
-    p2: "Player 2",
+    forceCap: "Speed cap",
 
-    score: "Score",
+    capLevel: "LEVEL",
 
-    skillPoints: "Skill Points",
+    upgradeCap: "Boost max ball speed",
 
-    rally: "Rally",
+    needPoint: "Not enough skill points",
 
-    conway: "CONWAY",
+    upgraded: "Force cap increased",
 
-    seconds: "sec",
+    onlySkill: "COST: 1 ✦",
 
-    serve: "Serve",
+    readyTitle: "CONWAY'S GAME OF LIFE",
 
+    readyText: "Place cells → evolve → earn ✦",
 
+    p1PickTitle: "PLAYER 1 · PLACE CELLS",
 
-    dragTitle: "Swipe Paddle",
+    p2PickTitle: "PLAYER 2 · PLACE CELLS",
 
-    dragText: "Drag freely in your half; faster swings create more force",
+    pickText: "Tap up to 10 cells",
 
-    keyboard1: "P1: WASD",
+    waiting: "Waiting",
 
-    keyboard2: "P2: Arrow keys",
+    confirm: "Lock In",
 
+    autoConfirm: "",
 
+    evolveTitle: "CELLS EVOLVING",
 
-    force: "Force",
+    evolveText: "Survive to earn skill points",
 
-    forceLow: "Soft",
+    cells: "Live Cells",
 
-    forceHigh: "Hard",
+    placed: "Placed",
 
-    forceCap: "Force Cap",
+    aliveTime: "Alive",
 
-    capLevel: "Cap Level",
+    rule:
 
-    upgradeCap: "Increase Force Cap",
-    needPoint: "Not enough skill points",
+      "+1 ✦ per 5s alive · +1 ✦ if 3+ survive",
 
-    upgraded: "Force cap increased",
+    challengeDone: "POWER EARNED",
 
-    onlySkill: "Only Skill",
+    survival: "Survival",
 
+    finalCells: "Final Cells",
 
+    bonus: "End Bonus",
 
-    conwayIncoming: "Time up · entering Conway",
+    gained: "Gained",
 
-    readyTitle: "Conway Ready",
+    resume: "PLAY TABLE TENNIS",
 
-    readyText: "Both players prepare · drafting begins in 5 seconds",
+    matchOver: "Match Over",
 
-    p1PickTitle: "Player 1 Draft",
+    wins: "Wins",
 
-    p2PickTitle: "Player 2 Draft",
+    finalScore: "Match Score",
 
-    pickText: "Choose up to 10 starting cells",
+    playAgain: "RETURN TO MATHVERSE",
 
-    waiting: "Waiting for the other player",
+    backEntrance: "RETURN TO MATHVERSE",
 
-    confirm: "Lock In",
+    pauseTitle: "Return to the entrance?",
 
-    autoConfirm: "Auto-lock when time expires",
+    pauseText: "Score, skill points and force-cap upgrades will be lost.",
 
-    evolveTitle: "Life Evolution",
+    stay: "Keep Playing",
 
-    evolveText: "Both boards evolve together for 20 seconds",
+    leave: "End Match",
 
-    cells: "Live Cells",
+    howTo: "QUICK GUIDE",
 
-    placed: "Placed",
+    step1: "Pick cells",
 
-    aliveTime: "Alive",
+    step1Text:
 
-    rule:
+      "P1, then P2: tap up to 10 cells each.",
 
-      "+1 skill point per 5 seconds alive; +1 if 3+ cells remain after 20 seconds; max 5 per round",
+    step2: "Earn power",
 
-    challengeDone: "Conway Challenge Complete",
+    step2Text:
 
-    survival: "Survival",
+      "Evolve for 20s: +1 ✦ per 5s alive; +1 ✦ if 3+ remain.",
 
-    finalCells: "Final Cells",
+    step3: "Play ping-pong",
 
-    bonus: "End Bonus",
+    step3Text:
 
-    gained: "Gained",
+      "Each controls one half. Faster swipe = faster shot.",
 
-    resume: "Resume Table Tennis",
+    step4: "Upgrade & win",
 
+    step4Text:
 
+      "Spend ✦ to boost speed. First to 9, win by 2; cap 12.",
 
-    matchOver: "Match Over",
+    step5: "Win",
 
-    wins: "Wins",
+    step5Text:
 
-    finalScore: "Final Score",
+      "First to 9, win by 2; cap 12.",
 
-    playAgain: "Play Again",
+    flowPick: "PICK CELLS",
 
-    backEntrance: "Back to Entrance",
+    flowEarn: "EARN POWER",
 
+    flowPlay: "PLAY TENNIS",
 
+    phaseIntro: "Place up to 10 cells each. Survive 20s to earn ✦.",
 
-    pauseTitle: "Return to the entrance?",
+    lifeRule: "2–3 neighbors: survive · Exactly 3: new cell",
 
-    pauseText: "Score, skill points and force-cap upgrades will be lost.",
-
-    stay: "Keep Playing",
-
-    leave: "End Match",
-
-
-
-    howTo: "How to Play",
-
-    step1: "Direct Paddle Drag",
-
-    step1Text:
-
-      "P1 owns the left half and P2 the right. The paddle follows finger X/Y movement directly; there is no separate hit button.",
-
-    step2: "Force Controls Ball Speed",
-
-    step2Text:
-
-      "Swipe speed becomes 0–100% force and maps to ball speed. Light contact still has a minimum speed while hard hits cannot exceed your current force cap.",
-
-    step3: "Forced Switch at 30s",
-
-    step3Text:
-
-      "Each table-tennis phase lasts exactly 30 seconds. At zero, the table freezes immediately and both players enter Conway together.",
-
-    step4: "Draft-Style Conway",
-
-    step4Text:
-
-      "After a 5-second ready phase, Player 1 gets 10 seconds to draft, then Player 2 gets 10 seconds, followed by 20 seconds of simultaneous evolution.",
-
-    step5: "Only Skill: Force Cap",
-
-    step5Text:
-
-      "Skill points come only from Conway. Spend 1 point to permanently raise your maximum shot speed for the current match; the force cap can be upgraded indefinitely.",
-
-  },
+  },
 
 };
 
-
-
 const makeBoard = () => Array(GRID * GRID).fill(false);
-
-
 
 const countAlive = (board) =>
 
-  board.reduce((sum, cell) => sum + (cell ? 1 : 0), 0);
-
-
+  board.reduce((sum, cell) => sum + (cell ? 1 : 0), 0);
 
 function evolve(board) {
 
-  const next = Array(GRID * GRID).fill(false);
+  const next = Array(GRID * GRID).fill(false);
 
+  for (let row = 0; row < GRID; row += 1) {
 
+    for (let col = 0; col < GRID; col += 1) {
 
-  for (let row = 0; row < GRID; row += 1) {
+      let neighbors = 0;
 
-    for (let col = 0; col < GRID; col += 1) {
+      for (let dr = -1; dr <= 1; dr += 1) {
 
-      let neighbors = 0;
+        for (let dc = -1; dc <= 1; dc += 1) {
 
+          if (dr === 0 && dc === 0) continue;
 
+          const rr = row + dr;
 
-      for (let dr = -1; dr <= 1; dr += 1) {
+          const cc = col + dc;
 
-        for (let dc = -1; dc <= 1; dc += 1) {
+          if (
 
-          if (dr === 0 && dc === 0) continue;
+            rr >= 0 &&
 
+            rr < GRID &&
 
+            cc >= 0 &&
 
-          const rr = row + dr;
+            cc < GRID &&
 
-          const cc = col + dc;
+            board[rr * GRID + cc]
 
+          ) {
 
+            neighbors += 1;
 
-          if (
+          }
 
-            rr >= 0 &&
+        }
 
-            rr < GRID &&
+      }
 
-            cc >= 0 &&
+      const index = row * GRID + col;
 
-            cc < GRID &&
+      next[index] = board[index]
 
-            board[rr * GRID + cc]
+        ? neighbors === 2 || neighbors === 3
 
-          ) {
+        : neighbors === 3;
 
-            neighbors += 1;
+    }
 
-          }
+  }
 
-        }
-
-      }
-
-
-
-      const index = row * GRID + col;
-
-
-
-      next[index] = board[index]
-
-        ? neighbors === 2 || neighbors === 3
-
-        : neighbors === 3;
-
-    }
-
-  }
-
-
-
-  return next;
+  return next;
 
 }
-
-
-
-function matchWon(p1, p2) {
-
-  const high = Math.max(p1, p2);
-
-  const low = Math.min(p1, p2);
-
-
-
-  if (high < MATCH_TARGET) return false;
-
-  if (high === MATCH_CAP) return true;
-
-
-
-  return high - low >= 2;
-
-}
-
-
 
 function clamp(value, min, max) {
 
-  return Math.max(min, Math.min(max, value));
+  return Math.max(min, Math.min(max, value));
 
 }
-
-
 
 function capSpeed(level) {
 
-  return BASE_MAX_BALL_SPEED + (level - 1) * CAP_STEP;
+  return BASE_MAX_BALL_SPEED + (level - 1) * CAP_STEP;
 
 }
-
-
 
 function makePaddle(player) {
 
-  return {
+  return {
 
-    x: player === "p1" ? 15 : 85,
+    x: player === "p1" ? 15 : 85,
 
-    y: 50,
+    y: 50,
 
-    vx: 0,
+    vx: 0,
 
-    vy: 0,
+    vy: 0,
 
-    angle: 0,
+    angle: 0,
 
-    lastMoveAt: performance.now(),
+    lastMoveAt: performance.now(),
 
-  };
+  };
 
 }
-
-
 
 function makeRuntime() {
 
-  return {
+  return {
 
-    p1: makePaddle("p1"),
+    p1: makePaddle("p1"),
 
-    p2: makePaddle("p2"),
+    p2: makePaddle("p2"),
 
-    rallyActive: false,
+    rallyActive: false,
 
-    server: "p1",
+    server: "p1",
 
-    lastFrame: performance.now(),
+    lastFrame: performance.now(),
 
+    ball: {
 
+      x: 50,
 
-    ball: {
+      y: 50,
 
-      x: 50,
+      vx: 0,
 
-      y: 50,
+      vy: 0,
 
-      vx: 0,
+      lastHitter: null,
 
-      vy: 0,
+      hitLockUntil: 0,
 
-      lastHitter: null,
+    },
 
-      hitLockUntil: 0,
-
-    },
-
-  };
+  };
 
 }
 
-
-
 export default function Conway({ onBack }) {
 
-  const [language, setLanguage] = useState("zh");
+  const competitionAttemptRef = useRef(null);
 
-  const [view, setView] = useState("entry");
+  const competitionFinalizedRef = useRef(false);
 
+  const [competitionScores, setCompetitionScores] = useState({ p1: 0, p2: 0 });
 
+  const [finalCompetitionScores, setFinalCompetitionScores] = useState(null);
 
-  const [scores, setScores] = useState({ p1: 0, p2: 0 });
+  const [language, setLanguage] = useState("en");
 
-  const scoresRef = useRef({ p1: 0, p2: 0 });
+  const [view, setView] = useState("entry");
 
+  const [nextConwayIn, setNextConwayIn] = useState(CONWAY_REENTRY_SECONDS);
 
+  const tableTimeLeftRef = useRef(CONWAY_REENTRY_SECONDS * 1000);
 
-  const [skillPoints, setSkillPoints] = useState({ p1: 0, p2: 0 });
+  const [scores, setScores] = useState({ p1: 0, p2: 0 });
 
+  const scoresRef = useRef({ p1: 0, p2: 0 });
 
+  const [skillPoints, setSkillPoints] = useState({ p1: 0, p2: 0 });
 
-  const [capLevels, setCapLevels] = useState({ p1: 1, p2: 1 });
+  const [capLevels, setCapLevels] = useState({ p1: 1, p2: 1 });
 
-  const capLevelsRef = useRef({ p1: 1, p2: 1 });
+  const capLevelsRef = useRef({ p1: 1, p2: 1 });
 
+  const [forceLevel, setForceLevel] = useState({ p1: 0, p2: 0 });
 
+  const forceRef = useRef({ p1: 0, p2: 0 });
 
-  const [forceLevel, setForceLevel] = useState({ p1: 0, p2: 0 });
+  const runtimeRef = useRef(makeRuntime());
 
-  const forceRef = useRef({ p1: 0, p2: 0 });
+  const [court, setCourt] = useState(() => {
 
+    const rt = runtimeRef.current;
 
+    return {
 
-  const runtimeRef = useRef(makeRuntime());
+      ...rt,
 
-  const [court, setCourt] = useState(() => {
+      p1: { ...rt.p1 },
 
-    const rt = runtimeRef.current;
+      p2: { ...rt.p2 },
 
-    return {
+      ball: { ...rt.ball },
 
-      ...rt,
+    };
 
-      p1: { ...rt.p1 },
+  });
 
-      p2: { ...rt.p2 },
+  const [rallyNumber, setRallyNumber] = useState(0);
 
-      ball: { ...rt.ball },
+  const [message, setMessage] = useState("");
 
-    };
+  const [winner, setWinner] = useState(null);
 
-  });
+const [showRules, setShowRules] = useState(false);
 
+  const [showLeave, setShowLeave] = useState(false);
 
+  const [board1, setBoard1] = useState(makeBoard);
 
-  const [rallyNumber, setRallyNumber] = useState(0);
+  const [board2, setBoard2] = useState(makeBoard);
 
-  const [message, setMessage] = useState("");
+  const board1Ref = useRef(makeBoard());
 
-  const [winner, setWinner] = useState(null);
+  const board2Ref = useRef(makeBoard());
 
+  const [conwayPhase, setConwayPhase] = useState("ready");
 
+  const [conwayTime, setConwayTime] = useState(CONWAY_READY_SECONDS);
 
-  const [tableTime, setTableTime] = useState(TABLE_PHASE_SECONDS);
+  const [survival, setSurvival] = useState({ p1: 0, p2: 0 });
 
-  const tableTimeRef = useRef(TABLE_PHASE_SECONDS);
+  const survivalRef = useRef({ p1: 0, p2: 0 });
 
+  const [challengeResult, setChallengeResult] = useState(null);
 
+  const keysRef = useRef(new Set());
 
-  const [showRules, setShowRules] = useState(false);
+  const dragRef = useRef(new Map());
 
-  const [showLeave, setShowLeave] = useState(false);
+  const t = COPY[language];
 
+  const snapshotCourt = useCallback(() => {
 
+    const rt = runtimeRef.current;
 
-  const [board1, setBoard1] = useState(makeBoard);
+    setCourt({
 
-  const [board2, setBoard2] = useState(makeBoard);
+      ...rt,
 
+      p1: { ...rt.p1 },
 
+      p2: { ...rt.p2 },
 
-  const board1Ref = useRef(makeBoard());
+      ball: { ...rt.ball },
 
-  const board2Ref = useRef(makeBoard());
+    });
 
+  }, []);
 
+  const setForce = useCallback((player, value) => {
 
-  const [conwayPhase, setConwayPhase] = useState("ready");
+    const next = clamp(value, 0, 1);
 
-  const [conwayTime, setConwayTime] = useState(CONWAY_READY_SECONDS);
+    forceRef.current[player] = next;
 
+    setForceLevel((prev) => ({
 
+      ...prev,
 
-  const [survival, setSurvival] = useState({ p1: 0, p2: 0 });
+      [player]: next,
 
-  const survivalRef = useRef({ p1: 0, p2: 0 });
+    }));
 
+  }, []);
 
+  const resetMatch = useCallback(() => {
 
-  const [challengeResult, setChallengeResult] = useState(null);
+    competitionAttemptRef.current = createCompetitionAttempt("conway");
 
+    competitionFinalizedRef.current = false;
 
+    setCompetitionScores({ p1: 0, p2: 0 });
 
-  const keysRef = useRef(new Set());
+    setFinalCompetitionScores(null);
 
-  const dragRef = useRef(new Map());
+    scoresRef.current = { p1: 0, p2: 0 };
 
+    setScores({ p1: 0, p2: 0 });
 
+    setSkillPoints({ p1: 0, p2: 0 });
 
-  const t = COPY[language];
+    capLevelsRef.current = { p1: 1, p2: 1 };
 
+    setCapLevels({ p1: 1, p2: 1 });
 
+    forceRef.current = { p1: 0, p2: 0 };
 
-  const snapshotCourt = useCallback(() => {
+    setForceLevel({ p1: 0, p2: 0 });
 
-    const rt = runtimeRef.current;
+    setRallyNumber(0);
 
+    // Reset the 30-second table clock for a completely new match.
+    tableTimeLeftRef.current = CONWAY_REENTRY_SECONDS * 1000;
+    setNextConwayIn(CONWAY_REENTRY_SECONDS);
 
+    setMessage("");
 
-    setCourt({
+    setWinner(null);
 
-      ...rt,
+    runtimeRef.current = makeRuntime();
 
-      p1: { ...rt.p1 },
+    snapshotCourt();
 
-      p2: { ...rt.p2 },
+    const nextBoard1 = makeBoard();
 
-      ball: { ...rt.ball },
+    const nextBoard2 = makeBoard();
 
-    });
+    board1Ref.current = nextBoard1;
 
-  }, []);
+    board2Ref.current = nextBoard2;
 
+    setBoard1(nextBoard1);
 
+    setBoard2(nextBoard2);
 
-  const setForce = useCallback((player, value) => {
+    survivalRef.current = { p1: 0, p2: 0 };
 
-    const next = clamp(value, 0, 1);
+    setSurvival({ p1: 0, p2: 0 });
 
-    forceRef.current[player] = next;
+    setChallengeResult(null);
 
+    setConwayPhase("ready");
 
+    setConwayTime(CONWAY_READY_SECONDS);
 
-    setForceLevel((prev) => ({
+    dragRef.current.clear();
 
-      ...prev,
+    keysRef.current.clear();
 
-      [player]: next,
+  }, [snapshotCourt]);
 
-    }));
+  const startMatch = useCallback(() => {
 
-  }, []);
+    resetMatch();
 
+    setView("conway");
 
+  }, [resetMatch]);
 
-  const resetTableTimer = useCallback(() => {
+  const returnToLobby = useCallback(() => {
 
-    tableTimeRef.current = TABLE_PHASE_SECONDS;
+    if (typeof onBack === "function") {
 
-    setTableTime(TABLE_PHASE_SECONDS);
+      onBack();
 
-  }, []);
+      return;
 
+    }
 
+    if (window.history.length > 1) {
 
-  const resetMatch = useCallback(() => {
+      window.history.back();
 
-    scoresRef.current = { p1: 0, p2: 0 };
+    }
 
-    setScores({ p1: 0, p2: 0 });
+  }, [onBack]);
 
+  const registerPoint = useCallback(
 
+    (player) => {
 
-    setSkillPoints({ p1: 0, p2: 0 });
+      const rt = runtimeRef.current;
 
+      if (!rt.rallyActive) return;
 
+      rt.rallyActive = false;
 
-    capLevelsRef.current = { p1: 1, p2: 1 };
+      rt.server = player;
 
-    setCapLevels({ p1: 1, p2: 1 });
+      rt.ball.vx = 0;
 
+      rt.ball.vy = 0;
 
+      rt.ball.x = player === "p1" ? rt.p1.x + 6 : rt.p2.x - 6;
 
-    forceRef.current = { p1: 0, p2: 0 };
+      rt.ball.y = player === "p1" ? rt.p1.y : rt.p2.y;
 
-    setForceLevel({ p1: 0, p2: 0 });
+      rt.ball.lastHitter = null;
 
+      const nextScores = {
 
+        ...scoresRef.current,
 
-    setRallyNumber(0);
+        [player]: scoresRef.current[player] + 1,
 
-    setMessage("");
+      };
 
-    setWinner(null);
+      scoresRef.current = nextScores;
 
+      setScores(nextScores);
 
+      setRallyNumber((value) => value + 1);
 
-    runtimeRef.current = makeRuntime();
+      setMessage(`${player === "p1" ? t.p1 : t.p2} +1`);
 
-    snapshotCourt();
+      snapshotCourt();
 
+      const isMatchOver = isConwayMatchWon(nextScores.p1, nextScores.p2);
 
+      if (!competitionFinalizedRef.current) {
 
-    resetTableTimer();
+        const nextCompetitionScores = {
 
+          p1: calculateConwayScore(
 
+            nextScores.p1,
 
-    dragRef.current.clear();
+            nextScores.p2,
 
-    keysRef.current.clear();
+            isMatchOver && player === "p1"
 
-  }, [resetTableTimer, snapshotCourt]);
+          ),
 
+          p2: calculateConwayScore(
 
+            nextScores.p2,
 
-  const startMatch = useCallback(() => {
+            nextScores.p1,
 
-    resetMatch();
+            isMatchOver && player === "p2"
 
-    setView("table");
+          ),
 
-  }, [resetMatch]);
+        };
 
+        if (isMatchOver) {
 
+          competitionFinalizedRef.current = true;
 
-  const returnToLobby = useCallback(() => {
+          const attempt =
 
-    if (typeof onBack === "function") {
+            competitionAttemptRef.current ?? createCompetitionAttempt("conway");
 
-      onBack();
+          competitionAttemptRef.current = attempt;
 
-      return;
+          const p1Result = attempt.finalize({
 
-    }
+            playerSlot: "p1",
 
+            finalScore: nextCompetitionScores.p1,
 
+            outcome: player === "p1" ? "win" : "loss",
 
-    if (window.history.length > 1) {
+          });
 
-      window.history.back();
+          const p2Result = attempt.finalize({
 
-    }
+            playerSlot: "p2",
 
-  }, [onBack]);
+            finalScore: nextCompetitionScores.p2,
 
+            outcome: player === "p2" ? "win" : "loss",
 
+          });
 
-  const enterConway = useCallback(() => {
+          const frozenCompetitionScores = {
 
-    keysRef.current.clear();
+            p1: p1Result.finalScore,
 
-    dragRef.current.clear();
+            p2: p2Result.finalScore,
 
+          };
 
+          setCompetitionScores(frozenCompetitionScores);
 
-    const rt = runtimeRef.current;
+          setFinalCompetitionScores(frozenCompetitionScores);
 
+        } else {
 
+          setCompetitionScores(nextCompetitionScores);
 
-    rt.rallyActive = false;
+        }
 
-    rt.ball.vx = 0;
+      }
 
-    rt.ball.vy = 0;
+      if (isMatchOver) {
 
+        setWinner(player);
 
+        window.setTimeout(() => {
 
-    snapshotCourt();
+          setView("end");
 
+        }, 700);
 
+        return;
 
-    const b1 = makeBoard();
+      }
 
-    const b2 = makeBoard();
+      window.setTimeout(() => setMessage(""), 500);
 
+    },
 
+    [snapshotCourt, t.p1, t.p2]
 
-    board1Ref.current = b1;
+  );
 
-    board2Ref.current = b2;
+  const startRally = useCallback(() => {
 
+    if (view !== "table") return;
 
+    const rt = runtimeRef.current;
 
-    survivalRef.current = { p1: 0, p2: 0 };
+    if (rt.rallyActive) return;
 
+    const server = rt.server;
 
+    const paddle = rt[server];
 
-    setBoard1(b1);
+    const direction = server === "p1" ? 1 : -1;
 
-    setBoard2(b2);
+    rt.rallyActive = true;
 
-    setSurvival({ p1: 0, p2: 0 });
+    rt.ball = {
 
+      x: paddle.x + direction * 6,
 
+      y: paddle.y,
 
-    setChallengeResult(null);
+      vx: direction * MIN_BALL_SPEED,
 
+      vy: (Math.random() - 0.5) * 0.008,
 
+      lastHitter: server,
 
-    setConwayPhase("ready");
+      hitLockUntil: performance.now() + 240,
 
-    setConwayTime(CONWAY_READY_SECONDS);
+    };
 
+    setMessage("");
 
+    snapshotCourt();
 
-    setMessage("");
+  }, [snapshotCourt, view]);
 
-    setView("conway");
+  const upgradePower = useCallback(
 
-  }, [snapshotCourt]);
+    (player) => {
 
+      const level = capLevelsRef.current[player];
 
+      if (skillPoints[player] < POWER_SKILL_COST) {
 
-  /* 强制 30 秒：到 0 立即切换，不等待 rally。 */
+        setMessage(t.needPoint);
 
-  useEffect(() => {
+        window.setTimeout(() => setMessage(""), 800);
 
-    if (view !== "table" || winner || showLeave) {
+        return;
 
-      return undefined;
+      }
 
-    }
+      setSkillPoints((prev) => ({
 
+        ...prev,
 
+        [player]: prev[player] - POWER_SKILL_COST,
 
-    const timer = window.setInterval(() => {
+      }));
 
-      tableTimeRef.current -= 1;
+      const nextLevel = level + 1;
 
+      capLevelsRef.current[player] = nextLevel;
 
+      setCapLevels((prev) => ({
 
-      const next = Math.max(0, tableTimeRef.current);
+        ...prev,
 
+        [player]: nextLevel,
 
+      }));
 
-      setTableTime(next);
+      setMessage(
 
+        `${player === "p1" ? t.p1 : t.p2} · ${t.upgraded}`
 
+      );
 
-      if (next <= 0) {
+      window.setTimeout(() => setMessage(""), 900);
 
-        window.clearInterval(timer);
+    },
 
-        setMessage(t.conwayIncoming);
+    [skillPoints, t.needPoint, t.p1, t.p2, t.upgraded]
 
+  );
 
+  const tablePosition = useCallback((event) => {
 
-        window.setTimeout(() => {
+    const rect = event.currentTarget.getBoundingClientRect();
 
-          enterConway();
+    return {
 
-        }, 420);
+      x: ((event.clientX - rect.left) / rect.width) * 100,
 
-      }
+      y: ((event.clientY - rect.top) / rect.height) * 100,
 
-    }, 1000);
+    };
 
+  }, []);
 
+  const movePaddle = useCallback(
 
-    return () => window.clearInterval(timer);
+    (player, rawX, rawY, vx = 0, vy = 0) => {
 
-  }, [enterConway, showLeave, t.conwayIncoming, view, winner]);
+      const paddle = runtimeRef.current[player];
 
+      const isP1 = player === "p1";
 
+      paddle.x = clamp(rawX, isP1 ? 5 : 55, isP1 ? 45 : 95);
 
-  const registerPoint = useCallback(
+      paddle.y = clamp(rawY, 9, 91);
 
-    (player) => {
+      paddle.vx = vx;
 
-      const rt = runtimeRef.current;
+      paddle.vy = vy;
 
+      paddle.lastMoveAt = performance.now();
 
+      const swipe = Math.hypot(vx, vy);
 
-      if (!rt.rallyActive) return;
+      /* 力道由真实手指速度而来。
 
+         约 0.15 %/ms 视为满力道。 */
 
+      const normalizedForce = clamp(swipe / 0.15, 0, 1);
 
-      rt.rallyActive = false;
+      setForce(player, normalizedForce);
 
-      rt.server = player;
+      if (swipe > 0.008) {
 
+        const rawAngle = (Math.atan2(vy, Math.abs(vx) + 0.001) * 180) / Math.PI;
 
+        paddle.angle = clamp(rawAngle, -42, 42);
 
-      rt.ball.vx = 0;
+      }
 
-      rt.ball.vy = 0;
+      snapshotCourt();
 
-      rt.ball.x = player === "p1" ? rt.p1.x + 6 : rt.p2.x - 6;
+    },
 
-      rt.ball.y = player === "p1" ? rt.p1.y : rt.p2.y;
+    [setForce, snapshotCourt]
 
-      rt.ball.lastHitter = null;
+  );
 
+  const handlePointerDown = useCallback(
 
+    (event) => {
 
-      const nextScores = {
+      if (view !== "table") return;
 
-        ...scoresRef.current,
+      event.preventDefault();
 
-        [player]: scoresRef.current[player] + 1,
+      const position = tablePosition(event);
 
-      };
+      const player = position.x < 50 ? "p1" : "p2";
 
+      const alreadyControlled = Array.from(dragRef.current.values()).some(
 
+        (item) => item.player === player
 
-      scoresRef.current = nextScores;
+      );
 
-      setScores(nextScores);
+      if (alreadyControlled) return;
 
+      event.currentTarget.setPointerCapture?.(event.pointerId);
 
+      dragRef.current.set(event.pointerId, {
 
-      setRallyNumber((value) => value + 1);
+        player,
 
+        lastX: position.x,
 
+        lastY: position.y,
 
-      setMessage(`${player === "p1" ? t.p1 : t.p2} +1`);
+        lastTime: performance.now(),
 
+      });
 
+      movePaddle(player, position.x, position.y, 0, 0);
 
-      snapshotCourt();
+    },
 
+    [movePaddle, tablePosition, view]
 
+  );
 
-      if (matchWon(nextScores.p1, nextScores.p2)) {
+  const handlePointerMove = useCallback(
 
-        setWinner(player);
+    (event) => {
 
+      const drag = dragRef.current.get(event.pointerId);
 
+      if (!drag || view !== "table") return;
 
-        window.setTimeout(() => {
+      event.preventDefault();
 
-          setView("end");
+      const position = tablePosition(event);
 
-        }, 700);
+      const now = performance.now();
 
+      const dt = Math.max(8, now - drag.lastTime);
 
+      const vx = (position.x - drag.lastX) / dt;
 
-        return;
+      const vy = (position.y - drag.lastY) / dt;
 
-      }
+      drag.lastX = position.x;
 
+      drag.lastY = position.y;
 
+      drag.lastTime = now;
 
-      window.setTimeout(() => setMessage(""), 500);
+      movePaddle(drag.player, position.x, position.y, vx, vy);
 
-    },
+    },
 
-    [snapshotCourt, t.p1, t.p2]
+    [movePaddle, tablePosition, view]
 
-  );
+  );
 
+  const handlePointerUp = useCallback(
 
+    (event) => {
 
-  const startRally = useCallback(() => {
+      const drag = dragRef.current.get(event.pointerId);
 
-    if (view !== "table") return;
+      if (!drag) return;
 
+      dragRef.current.delete(event.pointerId);
 
+      runtimeRef.current[drag.player].vx *= 0.18;
 
-    const rt = runtimeRef.current;
+      runtimeRef.current[drag.player].vy *= 0.18;
 
+      setForce(drag.player, forceRef.current[drag.player] * 0.35);
 
+    },
 
-    if (rt.rallyActive) return;
+    [setForce]
 
+  );
 
+  const tryPaddleHit = useCallback(
 
-    const server = rt.server;
+    (player, now) => {
 
-    const paddle = rt[server];
+      const rt = runtimeRef.current;
 
-    const direction = server === "p1" ? 1 : -1;
+      const paddle = rt[player];
 
+      const ball = rt.ball;
 
+      const isP1 = player === "p1";
 
-    rt.rallyActive = true;
+      const direction = isP1 ? 1 : -1;
 
+      const movingTowardPaddle = isP1 ? ball.vx < 0 : ball.vx > 0;
 
+      if (!movingTowardPaddle || now < ball.hitLockUntil) {
 
-    rt.ball = {
+        return false;
 
-      x: paddle.x + direction * 6,
+      }
 
-      y: paddle.y,
+      const dx = Math.abs(ball.x - paddle.x);
 
-      vx: direction * MIN_BALL_SPEED,
+      const dy = Math.abs(ball.y - paddle.y);
 
-      vy: (Math.random() - 0.5) * 0.008,
+      if (dx > PADDLE_RADIUS_X || dy > PADDLE_RADIUS_Y) {
 
-      lastHitter: server,
+        return false;
 
-      hitLockUntil: performance.now() + 240,
+      }
 
-    };
+      const swipeSpeed = Math.hypot(paddle.vx, paddle.vy);
 
+      /* 0.015 是轻碰，0.15 视作满力道。 */
 
+      const force = clamp((swipeSpeed - 0.015) / 0.135, 0, 1);
 
-    setMessage("");
+      setForce(player, force);
 
-    snapshotCourt();
+      const currentCap = capSpeed(capLevelsRef.current[player]);
 
-  }, [snapshotCourt, view]);
+      /* 力道决定球速：
 
+         0% -> MIN_BALL_SPEED
 
+         100% -> 当前玩家的 max cap */
 
-  const upgradePower = useCallback(
+      const shotSpeed =
 
-    (player) => {
+        MIN_BALL_SPEED + (currentCap - MIN_BALL_SPEED) * force;
 
-      const level = capLevelsRef.current[player];
+      const verticalFromSwipe = clamp(paddle.vy * 0.055, -0.024, 0.024);
 
+      const verticalFromOffset = clamp(
 
+        ((ball.y - paddle.y) / PADDLE_RADIUS_Y) * 0.010,
 
-      if (skillPoints[player] < POWER_SKILL_COST) {
+        -0.010,
 
-        setMessage(t.needPoint);
+        0.010
 
-        window.setTimeout(() => setMessage(""), 800);
+      );
 
-        return;
+      ball.vx = direction * shotSpeed;
 
-      }
+      ball.vy = clamp(
 
+        verticalFromSwipe + verticalFromOffset,
 
+        -0.027,
 
-      setSkillPoints((prev) => ({
+        0.027
 
-        ...prev,
+      );
 
-        [player]: prev[player] - POWER_SKILL_COST,
+      ball.x = paddle.x + direction * (PADDLE_RADIUS_X + 1.4);
 
-      }));
+      ball.lastHitter = player;
 
+      ball.hitLockUntil = now + 180;
 
+      return true;
 
-      const nextLevel = level + 1;
+    },
 
+    [setForce]
 
+  );
 
-      capLevelsRef.current[player] = nextLevel;
+  useEffect(() => {
 
+    const onKeyDown = (event) => {
 
+      keysRef.current.add(event.key.toLowerCase());
 
-      setCapLevels((prev) => ({
+      if (view === "table" && event.code === "Space" && !event.repeat) {
 
-        ...prev,
+        event.preventDefault();
 
-        [player]: nextLevel,
+        startRally();
 
-      }));
+      }
 
+    };
 
+    const onKeyUp = (event) => {
 
-      setMessage(
+      keysRef.current.delete(event.key.toLowerCase());
 
-        `${player === "p1" ? t.p1 : t.p2} · ${t.upgraded}`
+    };
 
-      );
+    window.addEventListener("keydown", onKeyDown);
 
+    window.addEventListener("keyup", onKeyUp);
 
+    return () => {
 
-      window.setTimeout(() => setMessage(""), 900);
+      window.removeEventListener("keydown", onKeyDown);
 
-    },
+      window.removeEventListener("keyup", onKeyUp);
 
-    [skillPoints, t.needPoint, t.p1, t.p2, t.upgraded]
+    };
 
-  );
+  }, [startRally, view]);
 
+  useEffect(() => {
 
+    if (view !== "table") return undefined;
 
-  const tablePosition = useCallback((event) => {
+    let frame;
 
-    const rect = event.currentTarget.getBoundingClientRect();
+    const loop = (time) => {
 
+      const rt = runtimeRef.current;
 
+      const dt = Math.min(32, Math.max(0, time - rt.lastFrame || 16));
 
-    return {
+      rt.lastFrame = time;
 
-      x: ((event.clientX - rect.left) / rect.width) * 100,
+      const keyboardSpeed = 0.026;
 
-      y: ((event.clientY - rect.top) / rect.height) * 100,
+      if (keysRef.current.has("a")) rt.p1.x = Math.max(5, rt.p1.x - keyboardSpeed * dt);
 
-    };
+      if (keysRef.current.has("d")) rt.p1.x = Math.min(45, rt.p1.x + keyboardSpeed * dt);
 
-  }, []);
+      if (keysRef.current.has("w")) rt.p1.y = Math.max(9, rt.p1.y - keyboardSpeed * dt);
 
+      if (keysRef.current.has("s")) rt.p1.y = Math.min(91, rt.p1.y + keyboardSpeed * dt);
 
+      if (keysRef.current.has("arrowleft")) rt.p2.x = Math.max(55, rt.p2.x - keyboardSpeed * dt);
 
-  const movePaddle = useCallback(
+      if (keysRef.current.has("arrowright")) rt.p2.x = Math.min(95, rt.p2.x + keyboardSpeed * dt);
 
-    (player, rawX, rawY, vx = 0, vy = 0) => {
+      if (keysRef.current.has("arrowup")) rt.p2.y = Math.max(9, rt.p2.y - keyboardSpeed * dt);
 
-      const paddle = runtimeRef.current[player];
+      if (keysRef.current.has("arrowdown")) rt.p2.y = Math.min(91, rt.p2.y + keyboardSpeed * dt);
 
-      const isP1 = player === "p1";
+      if (rt.rallyActive) {
 
+        const ball = rt.ball;
 
+        ball.x += ball.vx * dt;
 
-      paddle.x = clamp(rawX, isP1 ? 5 : 55, isP1 ? 45 : 95);
+        ball.y += ball.vy * dt;
 
-      paddle.y = clamp(rawY, 9, 91);
+        /* 极轻微空气阻力，让高力道仍然明显但不会无限飞快。 */
 
+        ball.vx *= Math.pow(0.99986, dt);
 
+        ball.vy *= Math.pow(0.99972, dt);
 
-      paddle.vx = vx;
+        tryPaddleHit("p1", time);
 
-      paddle.vy = vy;
+        tryPaddleHit("p2", time);
 
-      paddle.lastMoveAt = performance.now();
+        if (ball.x < -3) {
 
+          registerPoint("p2");
 
+        } else if (ball.x > 103) {
 
-      const swipe = Math.hypot(vx, vy);
+          registerPoint("p1");
 
+        } else if (ball.y < -4 || ball.y > 104) {
 
+          registerPoint(ball.lastHitter === "p1" ? "p2" : "p1");
 
-      /* 力道由真实手指速度而来。
+        }
 
-         约 0.15 %/ms 视为满力道。 */
+      }
 
-      const normalizedForce = clamp(swipe / 0.15, 0, 1);
+      ["p1", "p2"].forEach((player) => {
 
-      setForce(player, normalizedForce);
+        const paddle = rt[player];
 
+        if (time - paddle.lastMoveAt > 90) {
 
+          paddle.vx *= 0.75;
 
-      if (swipe > 0.008) {
+          paddle.vy *= 0.75;
 
-        const rawAngle = (Math.atan2(vy, Math.abs(vx) + 0.001) * 180) / Math.PI;
+          paddle.angle *= 0.82;
 
-        paddle.angle = clamp(rawAngle, -42, 42);
+          const fadedForce = forceRef.current[player] * 0.90;
 
-      }
+          if (fadedForce < 0.01) {
 
+            if (forceRef.current[player] !== 0) setForce(player, 0);
 
+          } else if (Math.abs(fadedForce - forceRef.current[player]) > 0.03) {
 
-      snapshotCourt();
+            setForce(player, fadedForce);
 
-    },
+          }
 
-    [setForce, snapshotCourt]
+        }
 
-  );
+      });
 
+      setCourt({
 
+        ...rt,
 
-  const handlePointerDown = useCallback(
+        p1: { ...rt.p1 },
 
-    (event) => {
+        p2: { ...rt.p2 },
 
-      if (view !== "table") return;
+        ball: { ...rt.ball },
 
+      });
 
+      frame = requestAnimationFrame(loop);
 
-      event.preventDefault();
+    };
 
+    runtimeRef.current.lastFrame = performance.now();
 
+    frame = requestAnimationFrame(loop);
 
-      const position = tablePosition(event);
+    return () => cancelAnimationFrame(frame);
 
-      const player = position.x < 50 ? "p1" : "p2";
+  }, [registerPoint, setForce, tryPaddleHit, view]);
 
+  const setBoardFor = useCallback((player, next) => {
 
+    if (player === "p1") {
 
-      const alreadyControlled = Array.from(dragRef.current.values()).some(
+      board1Ref.current = next;
 
-        (item) => item.player === player
+      setBoard1(next);
 
-      );
+    } else {
 
+      board2Ref.current = next;
 
+      setBoard2(next);
 
-      if (alreadyControlled) return;
+    }
 
+  }, []);
 
+  const toggleCell = useCallback(
 
-      event.currentTarget.setPointerCapture?.(event.pointerId);
+    (player, index) => {
 
+      const canPick =
 
+        (conwayPhase === "p1-pick" && player === "p1") ||
 
-      dragRef.current.set(event.pointerId, {
+        (conwayPhase === "p2-pick" && player === "p2");
 
-        player,
+      if (!canPick) return;
 
-        lastX: position.x,
+      const source =
 
-        lastY: position.y,
+        player === "p1" ? board1Ref.current : board2Ref.current;
 
-        lastTime: performance.now(),
+      const next = [...source];
 
-      });
+      if (!next[index] && countAlive(next) >= MAX_CELLS) {
 
+        return;
 
+      }
 
-      movePaddle(player, position.x, position.y, 0, 0);
+      next[index] = !next[index];
 
-    },
+      setBoardFor(player, next);
 
-    [movePaddle, tablePosition, view]
+    },
 
-  );
+    [conwayPhase, setBoardFor]
 
+  );
 
+  const nextDraftPhase = useCallback(() => {
 
-  const handlePointerMove = useCallback(
+    if (conwayPhase === "p1-pick") {
 
-    (event) => {
+      setConwayPhase("p2-pick");
 
-      const drag = dragRef.current.get(event.pointerId);
+      setConwayTime(CONWAY_PICK_SECONDS);
 
+      return;
 
+    }
 
-      if (!drag || view !== "table") return;
+    if (conwayPhase === "p2-pick") {
 
+      survivalRef.current = { p1: 0, p2: 0 };
 
+      setSurvival({ p1: 0, p2: 0 });
 
-      event.preventDefault();
+      setConwayPhase("evolve");
 
+      setConwayTime(CONWAY_EVOLVE_SECONDS);
 
+    }
 
-      const position = tablePosition(event);
+  }, [conwayPhase]);
 
-      const now = performance.now();
+  useEffect(() => {
 
-      const dt = Math.max(8, now - drag.lastTime);
+    if (view !== "conway") return undefined;
 
+    if (conwayPhase === "summary" || conwayPhase === "evolve") {
 
+      return undefined;
 
-      const vx = (position.x - drag.lastX) / dt;
+    }
 
-      const vy = (position.y - drag.lastY) / dt;
+    const timer = window.setInterval(() => {
 
+      setConwayTime((value) => {
 
+        if (value > 1) {
 
-      drag.lastX = position.x;
+          return value - 1;
 
-      drag.lastY = position.y;
+        }
 
-      drag.lastTime = now;
+        if (conwayPhase === "ready") {
 
+          setConwayPhase("p1-pick");
 
+          return CONWAY_PICK_SECONDS;
 
-      movePaddle(drag.player, position.x, position.y, vx, vy);
+        }
 
-    },
+        if (conwayPhase === "p1-pick") {
 
-    [movePaddle, tablePosition, view]
+          setConwayPhase("p2-pick");
 
-  );
+          return CONWAY_PICK_SECONDS;
 
+        }
 
+        if (conwayPhase === "p2-pick") {
 
-  const handlePointerUp = useCallback(
+          survivalRef.current = { p1: 0, p2: 0 };
 
-    (event) => {
+          setSurvival({ p1: 0, p2: 0 });
 
-      const drag = dragRef.current.get(event.pointerId);
+          setConwayPhase("evolve");
 
+          return CONWAY_EVOLVE_SECONDS;
 
+        }
 
-      if (!drag) return;
+        return 0;
 
+      });
 
+    }, 1000);
 
-      dragRef.current.delete(event.pointerId);
+    return () => window.clearInterval(timer);
 
+  }, [conwayPhase, view]);
 
+  useEffect(() => {
 
-      runtimeRef.current[drag.player].vx *= 0.18;
+    if (view !== "conway" || conwayPhase !== "evolve") {
 
-      runtimeRef.current[drag.player].vy *= 0.18;
+      return undefined;
 
+    }
 
+    const timer = window.setInterval(() => {
 
-      setForce(drag.player, forceRef.current[drag.player] * 0.35);
+      const current1 = board1Ref.current;
 
-    },
+      const current2 = board2Ref.current;
 
-    [setForce]
+      if (countAlive(current1) > 0) {
 
-  );
+        survivalRef.current.p1 += 1;
 
+      }
 
+      if (countAlive(current2) > 0) {
 
-  const tryPaddleHit = useCallback(
+        survivalRef.current.p2 += 1;
 
-    (player, now) => {
+      }
 
-      const rt = runtimeRef.current;
+      const next1 = evolve(current1);
 
-      const paddle = rt[player];
+      const next2 = evolve(current2);
 
-      const ball = rt.ball;
+      setBoardFor("p1", next1);
 
+      setBoardFor("p2", next2);
 
+      setSurvival({ ...survivalRef.current });
 
-      const isP1 = player === "p1";
+      setConwayTime((value) => {
 
-      const direction = isP1 ? 1 : -1;
+        if (value > 1) {
 
+          return value - 1;
 
+        }
 
-      const movingTowardPaddle = isP1 ? ball.vx < 0 : ball.vx > 0;
+        window.clearInterval(timer);
 
+        const alive1 = countAlive(next1);
 
+        const alive2 = countAlive(next2);
 
-      if (!movingTowardPaddle || now < ball.hitLockUntil) {
+        const points1 = Math.min(
 
-        return false;
+          5,
 
-      }
+          Math.floor(survivalRef.current.p1 / 5) + (alive1 >= 3 ? 1 : 0)
 
+        );
 
+        const points2 = Math.min(
 
-      const dx = Math.abs(ball.x - paddle.x);
+          5,
 
-      const dy = Math.abs(ball.y - paddle.y);
+          Math.floor(survivalRef.current.p2 / 5) + (alive2 >= 3 ? 1 : 0)
 
+        );
 
+        setChallengeResult({
 
-      if (dx > PADDLE_RADIUS_X || dy > PADDLE_RADIUS_Y) {
+          p1: {
 
-        return false;
+            survival: survivalRef.current.p1,
 
-      }
+            finalCells: alive1,
 
+            bonus: alive1 >= 3 ? 1 : 0,
 
+            points: points1,
 
-      const swipeSpeed = Math.hypot(paddle.vx, paddle.vy);
+          },
 
+          p2: {
 
+            survival: survivalRef.current.p2,
 
-      /* 0.015 是轻碰，0.15 视作满力道。 */
+            finalCells: alive2,
 
-      const force = clamp((swipeSpeed - 0.015) / 0.135, 0, 1);
+            bonus: alive2 >= 3 ? 1 : 0,
 
+            points: points2,
 
+          },
 
-      setForce(player, force);
+        });
 
+        setSkillPoints((prev) => ({
 
+          p1: prev.p1 + points1,
 
-      const currentCap = capSpeed(capLevelsRef.current[player]);
+          p2: prev.p2 + points2,
 
+        }));
 
+        setConwayPhase("summary");
 
-      /* 力道决定球速：
+        return 0;
 
-         0% -> MIN_BALL_SPEED
+      });
 
-         100% -> 当前玩家的 max cap */
+    }, 1000);
 
-      const shotSpeed =
+    return () => window.clearInterval(timer);
 
-        MIN_BALL_SPEED + (currentCap - MIN_BALL_SPEED) * force;
+  }, [conwayPhase, setBoardFor, view]);
 
+  // Triggered by elapsed TABLE play time only (never during Conway stages).
+  // Preserve match score, earned skill points and speed-cap upgrades.
+  const restartConwayRound = useCallback(() => {
+    if (competitionFinalizedRef.current) return;
 
+    runtimeRef.current.rallyActive = false;
+    keysRef.current.clear();
+    dragRef.current.clear();
 
-      const verticalFromSwipe = clamp(paddle.vy * 0.055, -0.024, 0.024);
+    const empty1 = makeBoard();
+    const empty2 = makeBoard();
+    board1Ref.current = empty1;
+    board2Ref.current = empty2;
+    setBoard1(empty1);
+    setBoard2(empty2);
+    survivalRef.current = { p1: 0, p2: 0 };
+    setSurvival({ p1: 0, p2: 0 });
+    setChallengeResult(null);
+    setConwayTime(CONWAY_READY_SECONDS);
+    setConwayPhase("ready");
+    setMessage("");
+    setView("conway");
+  }, []);
 
-      const verticalFromOffset = clamp(
+  useEffect(() => {
+    if (view !== "table" || showRules || showLeave || winner) return undefined;
 
-        ((ball.y - paddle.y) / PADDLE_RADIUS_Y) * 0.010,
+    let lastTick = performance.now();
+    let active = true;
+    // A hidden browser tab must not count the suspended time on resume.
+    const syncVisibleClock = () => { lastTick = performance.now(); };
+    document.addEventListener("visibilitychange", syncVisibleClock);
+    const intervalId = window.setInterval(() => {
+      if (!active || competitionFinalizedRef.current) return;
+      // Do not consume the clock while the page is in a background tab.
+      const now = performance.now();
+      const elapsed = now - lastTick;
+      lastTick = now;
+      if (document.visibilityState === "hidden") return;
 
-        -0.010,
+      tableTimeLeftRef.current = Math.max(0, tableTimeLeftRef.current - elapsed);
+      const seconds = Math.ceil(tableTimeLeftRef.current / 1000);
+      setNextConwayIn((old) => (old === seconds ? old : seconds));
 
-        0.010
+      if (tableTimeLeftRef.current <= 0) {
+        active = false;
+        window.clearInterval(intervalId);
+        restartConwayRound();
+      }
+    }, 100);
 
-      );
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", syncVisibleClock);
+    };
+  }, [view, showRules, showLeave, winner, restartConwayRound]);
 
+  const resumeTable = useCallback(() => {
 
+    const rt = runtimeRef.current;
 
-      ball.vx = direction * shotSpeed;
+    rt.rallyActive = false;
 
-      ball.vy = clamp(
+    rt.p1 = makePaddle("p1");
 
-        verticalFromSwipe + verticalFromOffset,
+    rt.p2 = makePaddle("p2");
 
-        -0.027,
+    rt.ball = {
 
-        0.027
+      x: 50,
 
-      );
+      y: 50,
 
+      vx: 0,
 
+      vy: 0,
 
-      ball.x = paddle.x + direction * (PADDLE_RADIUS_X + 1.4);
+      lastHitter: null,
 
-      ball.lastHitter = player;
+      hitLockUntil: 0,
 
-      ball.hitLockUntil = now + 180;
+    };
 
+    setForce("p1", 0);
 
+    setForce("p2", 0);
 
-      return true;
+    snapshotCourt();
 
-    },
+    setMessage("");
 
-    [setForce]
+    tableTimeLeftRef.current = CONWAY_REENTRY_SECONDS * 1000;
+    setNextConwayIn(CONWAY_REENTRY_SECONDS);
+    setView("table");
 
-  );
+  }, [setForce, snapshotCourt]);
 
+  const renderBoard = (player, board) => {
 
+    const active =
 
-  useEffect(() => {
+      (conwayPhase === "p1-pick" && player === "p1") ||
 
-    const onKeyDown = (event) => {
+      (conwayPhase === "p2-pick" && player === "p2");
 
-      keysRef.current.add(event.key.toLowerCase());
+    return (
 
+      <div
 
+        className={[
 
-      if (view === "table" && event.code === "Space" && !event.repeat) {
+          "cw-board",
 
-        event.preventDefault();
+          player === "p1" ? "cw-board-blue" : "cw-board-pink",
 
-        startRally();
+          active ? "is-active" : "",
 
-      }
+        ]
 
-    };
+          .filter(Boolean)
 
+          .join(" ")}
 
+      >
 
-    const onKeyUp = (event) => {
+        {board.map((alive, index) => (
 
-      keysRef.current.delete(event.key.toLowerCase());
+          <button
 
-    };
+            key={index}
 
+            type="button"
 
+            className={`cw-cell ${alive ? "alive" : ""}`}
 
-    window.addEventListener("keydown", onKeyDown);
+            onClick={() => toggleCell(player, index)}
 
-    window.addEventListener("keyup", onKeyUp);
+            disabled={!active}
 
+            aria-label={`cell-${index}`}
 
+          >
 
-    return () => {
+            {alive && <span />}
 
-      window.removeEventListener("keydown", onKeyDown);
+          </button>
 
-      window.removeEventListener("keyup", onKeyUp);
+        ))}
 
-    };
+      </div>
 
-  }, [startRally, view]);
+    );
 
+  };
 
+  const renderPowerPanel = (player) => {
 
-  useEffect(() => {
+    const level = capLevels[player];
 
-    if (view !== "table") return undefined;
+    const force = forceLevel[player];
 
+    return (
 
+      <section
 
-    let frame;
+        className={`cw-power-panel ${
 
+          player === "p1" ? "cw-power-left" : "cw-power-right"
 
+        }`}
 
-    const loop = (time) => {
+      >
 
-      const rt = runtimeRef.current;
+        <header>
 
+          <span>{player === "p1" ? t.p1 : t.p2}</span>
 
+          <strong>
 
-      const dt = Math.min(32, Math.max(0, time - rt.lastFrame || 16));
-
-      rt.lastFrame = time;
-
-
-
-      const keyboardSpeed = 0.026;
-
-
-
-      if (keysRef.current.has("a")) rt.p1.x = Math.max(5, rt.p1.x - keyboardSpeed * dt);
-
-      if (keysRef.current.has("d")) rt.p1.x = Math.min(45, rt.p1.x + keyboardSpeed * dt);
-
-      if (keysRef.current.has("w")) rt.p1.y = Math.max(9, rt.p1.y - keyboardSpeed * dt);
-
-      if (keysRef.current.has("s")) rt.p1.y = Math.min(91, rt.p1.y + keyboardSpeed * dt);
-
-
-
-      if (keysRef.current.has("arrowleft")) rt.p2.x = Math.max(55, rt.p2.x - keyboardSpeed * dt);
-
-      if (keysRef.current.has("arrowright")) rt.p2.x = Math.min(95, rt.p2.x + keyboardSpeed * dt);
-
-      if (keysRef.current.has("arrowup")) rt.p2.y = Math.max(9, rt.p2.y - keyboardSpeed * dt);
-
-      if (keysRef.current.has("arrowdown")) rt.p2.y = Math.min(91, rt.p2.y + keyboardSpeed * dt);
-
-
-
-      if (rt.rallyActive) {
-
-        const ball = rt.ball;
-
-
-
-        ball.x += ball.vx * dt;
-
-        ball.y += ball.vy * dt;
-
-
-
-        /* 极轻微空气阻力，让高力道仍然明显但不会无限飞快。 */
-
-        ball.vx *= Math.pow(0.99986, dt);
-
-        ball.vy *= Math.pow(0.99972, dt);
-
-
-
-        tryPaddleHit("p1", time);
-
-        tryPaddleHit("p2", time);
-
-
-
-        if (ball.x < -3) {
-
-          registerPoint("p2");
-
-        } else if (ball.x > 103) {
-
-          registerPoint("p1");
-
-        } else if (ball.y < -4 || ball.y > 104) {
-
-          registerPoint(ball.lastHitter === "p1" ? "p2" : "p1");
-
-        }
-
-      }
-
-
-
-      ["p1", "p2"].forEach((player) => {
-
-        const paddle = rt[player];
-
-
-
-        if (time - paddle.lastMoveAt > 90) {
-
-          paddle.vx *= 0.75;
-
-          paddle.vy *= 0.75;
-
-          paddle.angle *= 0.82;
-
-
-
-          const fadedForce = forceRef.current[player] * 0.90;
-
-
-
-          if (fadedForce < 0.01) {
-
-            if (forceRef.current[player] !== 0) setForce(player, 0);
-
-          } else if (Math.abs(fadedForce - forceRef.current[player]) > 0.03) {
-
-            setForce(player, fadedForce);
-
-          }
-
-        }
-
-      });
-
-
-
-      setCourt({
-
-        ...rt,
-
-        p1: { ...rt.p1 },
-
-        p2: { ...rt.p2 },
-
-        ball: { ...rt.ball },
-
-      });
-
-
-
-      frame = requestAnimationFrame(loop);
-
-    };
-
-
-
-    runtimeRef.current.lastFrame = performance.now();
-
-    frame = requestAnimationFrame(loop);
-
-
-
-    return () => cancelAnimationFrame(frame);
-
-  }, [registerPoint, setForce, tryPaddleHit, view]);
-
-
-
-  const setBoardFor = useCallback((player, next) => {
-
-    if (player === "p1") {
-
-      board1Ref.current = next;
-
-      setBoard1(next);
-
-    } else {
-
-      board2Ref.current = next;
-
-      setBoard2(next);
-
-    }
-
-  }, []);
-
-
-
-  const toggleCell = useCallback(
-
-    (player, index) => {
-
-      const canPick =
-
-        (conwayPhase === "p1-pick" && player === "p1") ||
-
-        (conwayPhase === "p2-pick" && player === "p2");
-
-
-
-      if (!canPick) return;
-
-
-
-      const source =
-
-        player === "p1" ? board1Ref.current : board2Ref.current;
-
-
-
-      const next = [...source];
-
-
-
-      if (!next[index] && countAlive(next) >= MAX_CELLS) {
-
-        return;
-
-      }
-
-
-
-      next[index] = !next[index];
-
-
-
-      setBoardFor(player, next);
-
-    },
-
-    [conwayPhase, setBoardFor]
-
-  );
-
-
-
-  const nextDraftPhase = useCallback(() => {
-
-    if (conwayPhase === "p1-pick") {
-
-      setConwayPhase("p2-pick");
-
-      setConwayTime(CONWAY_PICK_SECONDS);
-
-      return;
-
-    }
-
-
-
-    if (conwayPhase === "p2-pick") {
-
-      survivalRef.current = { p1: 0, p2: 0 };
-
-      setSurvival({ p1: 0, p2: 0 });
-
-
-
-      setConwayPhase("evolve");
-
-      setConwayTime(CONWAY_EVOLVE_SECONDS);
-
-    }
-
-  }, [conwayPhase]);
-
-
-
-  useEffect(() => {
-
-    if (view !== "conway") return undefined;
-
-
-
-    if (conwayPhase === "summary") return undefined;
-
-
-
-    const timer = window.setInterval(() => {
-
-      setConwayTime((value) => {
-
-        if (value > 1) {
-
-          return value - 1;
-
-        }
-
-
-
-        if (conwayPhase === "ready") {
-
-          setConwayPhase("p1-pick");
-
-          return CONWAY_PICK_SECONDS;
-
-        }
-
-
-
-        if (conwayPhase === "p1-pick") {
-
-          setConwayPhase("p2-pick");
-
-          return CONWAY_PICK_SECONDS;
-
-        }
-
-
-
-        if (conwayPhase === "p2-pick") {
-
-          survivalRef.current = { p1: 0, p2: 0 };
-
-          setSurvival({ p1: 0, p2: 0 });
-
-
-
-          setConwayPhase("evolve");
-
-          return CONWAY_EVOLVE_SECONDS;
-
-        }
-
-
-
-        return 0;
-
-      });
-
-    }, 1000);
-
-
-
-    return () => window.clearInterval(timer);
-
-  }, [conwayPhase, view]);
-
-
-
-  useEffect(() => {
-
-    if (view !== "conway" || conwayPhase !== "evolve") {
-
-      return undefined;
-
-    }
-
-
-
-    const timer = window.setInterval(() => {
-
-      const current1 = board1Ref.current;
-
-      const current2 = board2Ref.current;
-
-
-
-      if (countAlive(current1) > 0) {
-
-        survivalRef.current.p1 += 1;
-
-      }
-
-
-
-      if (countAlive(current2) > 0) {
-
-        survivalRef.current.p2 += 1;
-
-      }
-
-
-
-      const next1 = evolve(current1);
-
-      const next2 = evolve(current2);
-
-
-
-      setBoardFor("p1", next1);
-
-      setBoardFor("p2", next2);
-
-
-
-      setSurvival({ ...survivalRef.current });
-
-
-
-      setConwayTime((value) => {
-
-        if (value > 1) {
-
-          return value - 1;
-
-        }
-
-
-
-        window.clearInterval(timer);
-
-
-
-        const alive1 = countAlive(next1);
-
-        const alive2 = countAlive(next2);
-
-
-
-        const points1 = Math.min(
-
-          5,
-
-          Math.floor(survivalRef.current.p1 / 5) + (alive1 >= 3 ? 1 : 0)
-
-        );
-
-
-
-        const points2 = Math.min(
-
-          5,
-
-          Math.floor(survivalRef.current.p2 / 5) + (alive2 >= 3 ? 1 : 0)
-
-        );
-
-
-
-        setChallengeResult({
-
-          p1: {
-
-            survival: survivalRef.current.p1,
-
-            finalCells: alive1,
-
-            bonus: alive1 >= 3 ? 1 : 0,
-
-            points: points1,
-
-          },
-
-          p2: {
-
-            survival: survivalRef.current.p2,
-
-            finalCells: alive2,
-
-            bonus: alive2 >= 3 ? 1 : 0,
-
-            points: points2,
-
-          },
-
-        });
-
-
-
-        setSkillPoints((prev) => ({
-
-          p1: prev.p1 + points1,
-
-          p2: prev.p2 + points2,
-
-        }));
-
-
-
-        setConwayPhase("summary");
-
-
-
-        return 0;
-
-      });
-
-    }, 1000);
-
-
-
-    return () => window.clearInterval(timer);
-
-  }, [conwayPhase, setBoardFor, view]);
-
-
-
-  const resumeTable = useCallback(() => {
-
-    const rt = runtimeRef.current;
-
-
-
-    rt.rallyActive = false;
-
-    rt.p1 = makePaddle("p1");
-
-    rt.p2 = makePaddle("p2");
-
-
-
-    rt.ball = {
-
-      x: 50,
-
-      y: 50,
-
-      vx: 0,
-
-      vy: 0,
-
-      lastHitter: null,
-
-      hitLockUntil: 0,
-
-    };
-
-
-
-    resetTableTimer();
-
-
-
-    setForce("p1", 0);
-
-    setForce("p2", 0);
-
-
-
-    snapshotCourt();
-
-
-
-    setMessage("");
-
-    setView("table");
-
-  }, [resetTableTimer, setForce, snapshotCourt]);
-
-
-
-  const renderBoard = (player, board) => {
-
-    const active =
-
-      (conwayPhase === "p1-pick" && player === "p1") ||
-
-      (conwayPhase === "p2-pick" && player === "p2");
-
-
-
-    return (
-
-      <div
-
-        className={[
-
-          "cw-board",
-
-          player === "p1" ? "cw-board-blue" : "cw-board-pink",
-
-          active ? "is-active" : "",
-
-        ]
-
-          .filter(Boolean)
-
-          .join(" ")}
-
-      >
-
-        {board.map((alive, index) => (
-
-          <button
-
-            key={index}
-
-            type="button"
-
-            className={`cw-cell ${alive ? "alive" : ""}`}
-
-            onClick={() => toggleCell(player, index)}
-
-            disabled={!active}
-
-            aria-label={`cell-${index}`}
-
-          >
-
-            {alive && <span />}
-
-          </button>
-
-        ))}
-
-      </div>
-
-    );
-
-  };
-
-
-
-  const renderPowerPanel = (player) => {
-
-    const level = capLevels[player];
-
-    const force = forceLevel[player];
-    return (
-
-      <section
-
-        className={`cw-power-panel ${
-
-          player === "p1" ? "cw-power-left" : "cw-power-right"
-
-        }`}
-
-      >
-
-        <header>
-
-          <span>{player === "p1" ? t.p1 : t.p2}</span>
-
-
-
-          <strong>
-
-  ✦ {skillPoints[player]} · {t.capLevel} {level}
+  ✦ {skillPoints[player]} · {t.capLevel} {level}
 
 </strong>
 
-        </header>
+        </header>
 
+        <div className="cw-force-row">
 
+          <span>{t.force}</span>
 
-        <div className="cw-force-row">
+          <div className="cw-force-track">
 
-          <span>{t.force}</span>
+            <i style={{ width: `${force * 100}%` }} />
 
+          </div>
 
+          <strong>{Math.round(force * 100)}%</strong>
 
-          <div className="cw-force-track">
+        </div>
 
-            <i style={{ width: `${force * 100}%` }} />
+        <div className="cw-force-labels">
 
+          <span>{t.forceLow}</span>
 
+          <span>{t.forceHigh}</span>
 
-          </div>
+        </div>
 
+        <button
 
+          type="button"
 
-          <strong>{Math.round(force * 100)}%</strong>
+          className="cw-power-upgrade"
 
-        </div>
+          onClick={() => upgradePower(player)}
 
+        >
 
+          <i>✦</i>
 
-        <div className="cw-force-labels">
+          <div>
 
-          <span>{t.forceLow}</span>
+            <span>{t.onlySkill}</span>
 
-          <span>{t.forceHigh}</span>
+            <strong>{t.upgradeCap}</strong>
 
-        </div>
+          </div>
 
+          <b>{POWER_SKILL_COST}✦</b>
 
+        </button>
 
-        <button
+      </section>
 
-          type="button"
+    );
 
-          className="cw-power-upgrade"
+  };
 
-          onClick={() => upgradePower(player)}
-        >
+  const activePicker =
 
-          <i>✦</i>
+    conwayPhase === "p1-pick"
 
+      ? "p1"
 
+      : conwayPhase === "p2-pick"
 
-          <div>
+        ? "p2"
 
-            <span>{t.onlySkill}</span>
+        : null;
 
-            <strong>{t.upgradeCap}</strong>
+  return (
 
-          </div>
+    <main className="conway-page">
 
+      <section className="cw-frame">
 
+        {view === "entry" && (
 
-          <b>{POWER_SKILL_COST}✦</b>
+          <section className="cw-entry">
 
-        </button>
+            <img
 
-      </section>
+              src={homeBackground}
 
-    );
+              className="cw-entry-bg"
 
-  };
+              alt=""
 
+              draggable="false"
 
+            />
 
-  const activePicker =
+            <div className="cw-entry-shade" />
 
-    conwayPhase === "p1-pick"
+            <header className="cw-entry-topbar">
 
-      ? "p1"
+              <div>
 
-      : conwayPhase === "p2-pick"
+                <span>{t.eyebrow}</span>
 
-        ? "p2"
+                <strong>Conway Table Tennis Arena</strong>
 
-        : null;
+              </div>
 
+              <nav>
 
+                <button
 
-  return (
+                  type="button"
 
-    <main className="conway-page">
+                  onClick={() =>
 
-      <section className="cw-frame">
+                    setLanguage((value) => (value === "zh" ? "en" : "zh"))
 
-        {view === "entry" && (
+                  }
 
-          <section className="cw-entry">
+                >
 
-            <img
+                  {t.language}
 
-              src={homeBackground}
+                </button>
 
-              className="cw-entry-bg"
+                <button type="button" onClick={() => setShowRules(true)}>
 
-              alt=""
+                  ? {t.guide}
 
-              draggable="false"
+                </button>
 
-            />
+              </nav>
 
+            </header>
 
+            <div className="cw-entry-layout">
 
-            <div className="cw-entry-shade" />
+              <section className="cw-entry-copy">
 
+                <span className="cw-entry-badge">{t.badge}</span>
 
+                <h1>{t.title}</h1>
 
+                <h2>{t.englishTitle}</h2>
 
+                <p className="cw-entry-one-liner">{t.intro}</p>
 
+                <div className="cw-quick-flow" aria-label={t.englishTitle}>
 
+                  <div className="cw-quick-step"><b aria-hidden="true">▦</b><span>{t.flowPick}</span></div>
 
-            <header className="cw-entry-topbar">
+                  <i aria-hidden="true">→</i>
 
-              <div>
+                  <div className="cw-quick-step"><b aria-hidden="true">✦</b><span>{t.flowEarn}</span></div>
 
-                <span>{t.eyebrow}</span>
+                  <i aria-hidden="true">→</i>
 
-                <strong>Conway Table Tennis Arena</strong>
+                  <div className="cw-quick-step"><b aria-hidden="true">◉</b><span>{t.flowPlay}</span></div>
 
-              </div>
+                </div>
 
+                <p className="cw-entry-win-rule">{t.intro2}</p>
 
+                <button
 
-              <nav>
+                  type="button"
 
-                <button
+                  className="cw-entry-start"
 
-                  type="button"
+                  onClick={startMatch}
 
-                  onClick={() =>
+                >
 
-                    setLanguage((value) => (value === "zh" ? "en" : "zh"))
+                  <span>{t.start}</span>
 
-                  }
+                  <b>✦</b>
 
-                >
+                </button>
 
-                  {t.language}
+              </section>
 
-                </button>
+              <section className="cw-entry-island" aria-hidden="true">
 
+                <div className="cw-island-glow" />
 
+                <img src={conwayIsland} alt="" draggable="false" />
 
-                <button type="button" onClick={() => setShowRules(true)}>
+                <div className="cw-entry-orbit orbit-a" />
 
-                  ? {t.guide}
+                <div className="cw-entry-orbit orbit-b" />
 
-                </button>
+              </section>
 
-              </nav>
+            </div>
 
-            </header>
+          </section>
 
+        )}
 
+        {view === "table" && (
 
-            <div className="cw-entry-layout">
+          <section className="cw-match cw-layout-v5 cw-layout-v6">
 
-              <section className="cw-entry-copy">
+            <header className="cw-match-hud">
 
-                <span className="cw-entry-badge">{t.badge}</span>
+             <button
+                type="button"
+                className="cw-back-button"
+                onClick={() => setView("entry")}
+                title="Back"
+              >
+                ←
+              </button>
 
+              <div className="cw-score-box cw-score-left">
 
+                <div className="cw-score-player">
 
-                <h1>{t.title}</h1>
+                  <span>{t.p1}</span>
 
-                <h2>{t.englishTitle}</h2>
+                  <small
 
+                    className="cw-competition-live"
 
+                    aria-label={`${t.p1} competition score ${competitionScores.p1}`}
 
-                <p>{t.intro}</p>
+                    aria-live="polite"
 
-                <p className="cw-entry-sub">{t.intro2}</p>
+                  >
 
+                    P1 SCORE <b>{competitionScores.p1}</b>
 
+                  </small>
 
-                <button
+                </div>
 
-                  type="button"
+                <strong>{scores.p1}</strong>
 
-                  className="cw-entry-start"
+                <small>✦ {skillPoints.p1}</small>
 
-                  onClick={startMatch}
+              </div>
 
-                >
+              <div className="cw-score-center">
 
-                  <span>{t.start}</span>
+                <span>{t.score}</span>
 
-                  <b>✦</b>
+                <strong>
 
-                </button>
+                  {scores.p1} <i>:</i> {scores.p2}
 
-              </section>
+                </strong>
+                <small className="cw-next-conway">{language === "zh" ? "距下次 CONWAY" : "NEXT CONWAY"} · {nextConwayIn}s</small>
 
+              </div>
 
+              <div className="cw-score-box cw-score-right">
 
-              <section className="cw-entry-island" aria-hidden="true">
+                <div className="cw-score-player">
 
-                <div className="cw-island-glow" />
+                  <span>{t.p2}</span>
 
-                <img src={conwayIsland} alt="" draggable="false" />
+                  <small
 
-                <div className="cw-entry-orbit orbit-a" />
+                    className="cw-competition-live"
 
-                <div className="cw-entry-orbit orbit-b" />
+                    aria-label={`${t.p2} competition score ${competitionScores.p2}`}
 
-              </section>
+                    aria-live="polite"
 
-            </div>
+                  >
 
-          </section>
+                    P2 SCORE <b>{competitionScores.p2}</b>
 
-        )}
+                  </small>
 
+                </div>
 
+                <strong>{scores.p2}</strong>
 
-        {view === "table" && (
+                <small>✦ {skillPoints.p2}</small>
 
-          <section className="cw-match">
+              </div>
 
-            <header className="cw-match-hud">
+            </header>
 
-             <button
+            <div className="cw-table-shell">
 
-  type="button"
+              <div className="cw-table-glow" />
 
-  className="cw-back-button"
+              <div
 
-  onClick={() => setView("entry")}
+                className="cw-table"
 
-  title="Back"
+                onPointerDown={handlePointerDown}
 
->
+                onPointerMove={handlePointerMove}
 
-  ←
+                onPointerUp={handlePointerUp}
 
-</button>
+                onPointerCancel={handlePointerUp}
 
-              <div className="cw-score-box cw-score-left">
+              >
 
-                <span>{t.p1}</span>
+                <div className="cw-half cw-half-left">
 
-                <strong>{scores.p1}</strong>
+                  <span>P1</span>
 
-                <small>✦ {skillPoints.p1}</small>
+                </div>
 
-              </div>
+                <div className="cw-half cw-half-right">
 
+                  <span>P2</span>
 
+                </div>
 
-              <div className="cw-score-center">
+                <div className="cw-center-net">
 
-                <span>{t.score}</span>
+                  <i />
 
-                <strong>
+                </div>
 
-                  {scores.p1} <i>:</i> {scores.p2}
+                <div className="cw-horizontal-line" />
 
-                </strong>
+                <div className="cw-quarter-line left" />
 
-                <small>
+                <div className="cw-quarter-line right" />
 
-                  {t.rally} {rallyNumber + 1}
+                <div
 
-                </small>
+                  className="cw-paddle cw-paddle-one"
 
-              </div>
+                  style={{
 
+                    left: `${court.p1.x}%`,
 
+                    top: `${court.p1.y}%`,
 
-              <div
+                    "--angle": `${court.p1.angle}deg`,
 
-                className={[
+                  }}
 
-                  "cw-table-countdown",
+                >
 
-                  tableTime <= 5 ? "is-danger" : "",
+                  <div className="cw-paddle-face" />
 
-                ]
+                  <div className="cw-paddle-handle" />
 
-                  .filter(Boolean)
+                  <span>P1</span>
 
-                  .join(" ")}
+                </div>
 
-              >
+                <div
 
-                <span>{t.conway}</span>
+                  className="cw-paddle cw-paddle-two"
 
-                <strong>{String(tableTime).padStart(2, "0")}</strong>
+                  style={{
 
-                <small>{t.seconds}</small>
+                    left: `${court.p2.x}%`,
 
-              </div>
+                    top: `${court.p2.y}%`,
 
+                    "--angle": `${court.p2.angle}deg`,
 
+                  }}
 
-              <div className="cw-score-box cw-score-right">
+                >
 
-                <span>{t.p2}</span>
+                  <div className="cw-paddle-face" />
 
-                <strong>{scores.p2}</strong>
+                  <div className="cw-paddle-handle" />
 
-                <small>✦ {skillPoints.p2}</small>
+                  <span>P2</span>
 
-              </div>
+                </div>
 
-            </header>
+                <div
 
+                  className="cw-ball"
 
+                  style={{
 
-            <div className="cw-table-shell">
+                    left: `${court.ball.x}%`,
 
-              <div className="cw-table-glow" />
+                    top: `${court.ball.y}%`,
 
+                  }}
 
+                />
 
-              <div
+                {!court.rallyActive && !message && (
 
-                className="cw-table"
+                  <button
 
-                onPointerDown={handlePointerDown}
+                    type="button"
 
-                onPointerMove={handlePointerMove}
+                    className="cw-serve-button"
 
-                onPointerUp={handlePointerUp}
+                    onPointerDown={(event) => event.stopPropagation()}
 
-                onPointerCancel={handlePointerUp}
+                    onClick={startRally}
 
-              >
+                  >
 
-                <div className="cw-half cw-half-left">
+                    <span>{court.server === "p1" ? t.p1 : t.p2}</span>
 
-                  <span>P1</span>
+                    <strong>{t.serve}</strong>
 
-                </div>
+                    <small>TAP / SPACE</small>
 
+                  </button>
 
+                )}
 
-                <div className="cw-half cw-half-right">
+                {message && <div className="cw-match-message">{message}</div>}
 
-                  <span>P2</span>
+              </div>
+            </div>
+            <div className="cw-match-bottom cw-controls-v6" role="group" aria-label="Movement guide and player power panels">
+              <div className="cw-drag-tip cw-play-instructions-v6">
+                <b aria-hidden="true">↔ ↕</b>
+                <div>
+                  <strong>{t.dragTitle}</strong>
+                  <small>{t.dragText}</small>
+                </div>
+                <div className="cw-keyboard-hint">
+                  <span>{t.keyboard1}</span>
+                  <span>{t.keyboard2}</span>
+                </div>
+              </div>
+              {renderPowerPanel("p1")}
+              {renderPowerPanel("p2")}
+            </div>
 
-                </div>
+          </section>
 
+        )}
 
+        {view === "conway" && (
 
-                <div className="cw-center-net">
+          <section className={`cw-conway cw-layout-v5 cw-layout-v6 is-${conwayPhase}`}>
 
-                  <i />
+            <div className="cw-conway-bg" />
 
-                </div>
+            <div className="cw-stage-heading-v6">
+            <header className="cw-conway-top">
 
+              <div>
 
+                <span>CONWAY · GAME OF LIFE</span>
 
-                <div className="cw-horizontal-line" />
+                <strong>
 
-                <div className="cw-quarter-line left" />
+                  {conwayPhase === "ready"
 
-                <div className="cw-quarter-line right" />
+                    ? t.readyTitle
 
+                    : conwayPhase === "p1-pick"
 
+                      ? t.p1PickTitle
 
-                <div
+                      : conwayPhase === "p2-pick"
 
-                  className="cw-paddle cw-paddle-one"
+                        ? t.p2PickTitle
 
-                  style={{
+                        : conwayPhase === "evolve"
 
-                    left: `${court.p1.x}%`,
+                          ? t.evolveTitle
 
-                    top: `${court.p1.y}%`,
+                          : t.challengeDone}
 
-                    "--angle": `${court.p1.angle}deg`,
+                </strong>
 
-                  }}
+                <small>
 
-                >
+                  {conwayPhase === "ready"
 
-                  <div className="cw-paddle-face" />
+                    ? t.readyText
 
-                  <div className="cw-paddle-handle" />
+                    : conwayPhase === "p1-pick" || conwayPhase === "p2-pick"
 
-                  <span>P1</span>
+                      ? t.pickText
 
-                </div>
+                      : conwayPhase === "evolve"
 
+                        ? t.evolveText
 
+                        : ""}
 
-                <div
+                </small>
 
-                  className="cw-paddle cw-paddle-two"
+              </div>
 
-                  style={{
+              {conwayPhase !== "summary" && (
 
-                    left: `${court.p2.x}%`,
+                <div className="cw-conway-clock">
 
-                    top: `${court.p2.y}%`,
+                  <span>
 
-                    "--angle": `${court.p2.angle}deg`,
+                    {conwayPhase === "ready"
 
-                  }}
+                      ? "READY"
 
-                >
+                      : conwayPhase === "evolve"
 
-                  <div className="cw-paddle-face" />
+                        ? "LIVE"
 
-                  <div className="cw-paddle-handle" />
+                        : "PICK"}
 
-                  <span>P2</span>
+                  </span>
 
-                </div>
+                  <strong>{conwayTime}</strong>
 
+                  <small>SEC</small>
 
+                </div>
 
-                <div
+              )}
 
-                  className="cw-ball"
+            </header>
 
-                  style={{
+            <div className="cw-draft-flow">
 
-                    left: `${court.ball.x}%`,
+              <div className={`cw-draft-step ${conwayPhase === "ready" ? "active" : "done"}`}>
 
-                    top: `${court.ball.y}%`,
+                <i>01</i>
 
-                  }}
+                <span>READY</span>
 
-                />
+              </div>
 
+              <div
 
+                className={`cw-draft-step ${
 
-                {!court.rallyActive && !message && (
+                  conwayPhase === "p1-pick"
 
-                  <button
+                    ? "active blue"
 
-                    type="button"
+                    : ["p2-pick", "evolve", "summary"].includes(conwayPhase)
 
-                    className="cw-serve-button"
+                      ? "done"
 
-                    onPointerDown={(event) => event.stopPropagation()}
+                      : ""
 
-                    onClick={startRally}
+                }`}
 
-                  >
+              >
 
-                    <span>{court.server === "p1" ? t.p1 : t.p2}</span>
+                <i>02</i>
 
-                    <strong>{t.serve}</strong>
+                <span>P1 PICK</span>
 
-                    <small>TAP / SPACE</small>
+              </div>
 
-                  </button>
+              <div
 
-                )}
+                className={`cw-draft-step ${
 
+                  conwayPhase === "p2-pick"
 
+                    ? "active pink"
 
-                {message && <div className="cw-match-message">{message}</div>}
+                    : ["evolve", "summary"].includes(conwayPhase)
 
-              </div>
+                      ? "done"
 
+                      : ""
 
+                }`}
 
-              <div className="cw-drag-tip">
+              >
 
-                <b>↔ ↕</b>
+                <i>03</i>
 
-                <div>
+                <span>P2 PICK</span>
 
-                  <strong>{t.dragTitle}</strong>
+              </div>
 
-                  <small>{t.dragText}</small>
+              <div
 
-                </div>
+                className={`cw-draft-step ${
 
-              </div>
+                  conwayPhase === "evolve"
 
-            </div>
+                    ? "active gold"
 
+                    : conwayPhase === "summary"
 
+                      ? "done"
 
-            {renderPowerPanel("p1")}
+                      : ""
 
-            {renderPowerPanel("p2")}
+                }`}
 
+              >
 
+                <i>04</i>
 
-            <div className="cw-keyboard-hint">
+                <span>EVOLVE</span>
 
-              <span>{t.keyboard1}</span>
+              </div>
 
-              <span>{t.keyboard2}</span>
+            </div>
 
-            </div>
+            </div>
 
-          </section>
+            {conwayPhase === "ready" && (
 
-        )}
+              <div className="cw-phase-intro" role="status" aria-live="polite">
 
+                <div className="cw-phase-icons" aria-hidden="true">
 
+                  <span>▦</span><i>→</i><span>✦</span><i>→</i><span>◉</span>
 
-        {view === "conway" && (
+                </div>
 
-          <section className="cw-conway">
+                <strong>{t.readyTitle}</strong>
 
-            <div className="cw-conway-bg" />
+                <p>{t.phaseIntro}</p>
 
+                <small>{t.lifeRule}</small>
 
+              </div>
 
-            <header className="cw-conway-top">
+            )}
 
-              <div>
+            <div className="cw-conway-layout">
 
-                <span>CONWAY DRAFT PHASE</span>
+              <section
 
+                className={[
 
+                  "cw-board-panel",
 
-                <strong>
+                  "cw-board-panel-one",
 
-                  {conwayPhase === "ready"
+                  activePicker === "p1" ? "is-picking" : "",
 
-                    ? t.readyTitle
+                  activePicker === "p2" ? "is-waiting" : "",
 
-                    : conwayPhase === "p1-pick"
+                ]
 
-                      ? t.p1PickTitle
+                  .filter(Boolean)
 
-                      : conwayPhase === "p2-pick"
+                  .join(" ")}
 
-                        ? t.p2PickTitle
+              >
 
-                        : conwayPhase === "evolve"
+                <header>
 
-                          ? t.evolveTitle
+                  <div>
 
-                          : t.challengeDone}
+                    <span>{t.p1}</span>
 
-                </strong>
+                    <strong>BLUE MATRIX</strong>
 
+                  </div>
 
+                  <div>
 
-                <small>
+                    <small>{t.cells}</small>
 
-                  {conwayPhase === "ready"
+                    <b>{countAlive(board1)}</b>
 
-                    ? t.readyText
+                  </div>
 
-                    : conwayPhase === "p1-pick" || conwayPhase === "p2-pick"
+                </header>
 
-                      ? t.pickText
+                {renderBoard("p1", board1)}
 
-                      : conwayPhase === "evolve"
+                <footer>
 
-                        ? t.evolveText
+                  <span>
 
-                        : t.rule}
+                    {activePicker === "p1"
 
-                </small>
+                      ? `${t.placed} ${countAlive(board1)} / ${MAX_CELLS}`
 
-              </div>
+                      : activePicker === "p2"
 
+                        ? t.waiting
 
+                        : conwayPhase === "evolve"
 
-              {conwayPhase !== "summary" && (
+                          ? `${t.aliveTime} ${survival.p1}s`
 
-                <div className="cw-conway-clock">
+                          : ""}
 
-                  <span>
+                  </span>
 
-                    {conwayPhase === "ready"
+                  {activePicker === "p1" && (
 
-                      ? "READY"
+                    <button type="button" onClick={nextDraftPhase}>
 
-                      : conwayPhase === "evolve"
+                      {t.confirm}
 
-                        ? "LIVE"
+                    </button>
 
-                        : "PICK"}
+                  )}
 
-                  </span>
+                </footer>
 
+              </section>
 
+              <section className="cw-conway-core">
 
-                  <strong>{conwayTime}</strong>
+                <div className="cw-life-mark">∞</div>
 
-                  <small>SEC</small>
+                <span>✦ CONWAY</span>
 
-                </div>
+                <strong>
 
-              )}
+                  {conwayPhase === "ready"
 
-            </header>
+                    ? "PREPARE"
 
+                    : conwayPhase === "p1-pick"
 
+                      ? "PLAYER 1"
 
-            <div className="cw-draft-flow">
+                      : conwayPhase === "p2-pick"
 
-              <div className={`cw-draft-step ${conwayPhase === "ready" ? "active" : "done"}`}>
+                        ? "PLAYER 2"
 
-                <i>01</i>
+                        : conwayPhase === "evolve"
 
-                <span>READY</span>
+                          ? `GEN ${CONWAY_EVOLVE_SECONDS - conwayTime + 1}`
 
-              </div>
+                          : "RESULT"}
 
+                </strong>
 
+                {conwayPhase === "evolve" && <small>{t.rule}</small>}
 
-              <div
+              </section>
 
-                className={`cw-draft-step ${
+              <section
 
-                  conwayPhase === "p1-pick"
+                className={[
 
-                    ? "active blue"
+                  "cw-board-panel",
 
-                    : ["p2-pick", "evolve", "summary"].includes(conwayPhase)
+                  "cw-board-panel-two",
 
-                      ? "done"
+                  activePicker === "p2" ? "is-picking" : "",
 
-                      : ""
+                  activePicker === "p1" ? "is-waiting" : "",
 
-                }`}
+                ]
 
-              >
+                  .filter(Boolean)
 
-                <i>02</i>
+                  .join(" ")}
 
-                <span>P1 PICK</span>
+              >
 
-              </div>
+                <header>
 
+                  <div>
 
+                    <span>{t.p2}</span>
 
-              <div
+                    <strong>MAGENTA MATRIX</strong>
 
-                className={`cw-draft-step ${
+                  </div>
 
-                  conwayPhase === "p2-pick"
+                  <div>
 
-                    ? "active pink"
+                    <small>{t.cells}</small>
 
-                    : ["evolve", "summary"].includes(conwayPhase)
+                    <b>{countAlive(board2)}</b>
 
-                      ? "done"
+                  </div>
 
-                      : ""
+                </header>
 
-                }`}
+                {renderBoard("p2", board2)}
 
-              >
+                <footer>
 
-                <i>03</i>
+                  <span>
 
-                <span>P2 PICK</span>
+                    {activePicker === "p2"
 
-              </div>
+                      ? `${t.placed} ${countAlive(board2)} / ${MAX_CELLS}`
 
+                      : activePicker === "p1"
 
+                        ? t.waiting
 
-              <div
+                        : conwayPhase === "evolve"
 
-                className={`cw-draft-step ${
+                          ? `${t.aliveTime} ${survival.p2}s`
 
-                  conwayPhase === "evolve"
+                          : ""}
 
-                    ? "active gold"
+                  </span>
 
-                    : conwayPhase === "summary"
+                  {activePicker === "p2" && (
 
-                      ? "done"
+                    <button type="button" onClick={nextDraftPhase}>
 
-                      : ""
+                      {t.confirm}
 
-                }`}
+                    </button>
 
-              >
+                  )}
 
-                <i>04</i>
+                </footer>
 
-                <span>EVOLVE</span>
+              </section>
 
-              </div>
+            </div>
 
-            </div>
+            {conwayPhase === "summary" && challengeResult && (
 
+              <div className="cw-summary-overlay">
 
+                <section className="cw-summary-card">
 
-            <div className="cw-conway-layout">
+                  <span className="cw-summary-kicker">CONWAY COMPLETE</span>
 
-              <section
+                  <h2>{t.challengeDone}</h2>
 
-                className={[
+                  <div className="cw-summary-grid">
 
-                  "cw-board-panel",
+                    {["p1", "p2"].map((player) => {
 
-                  "cw-board-panel-one",
+                      const result = challengeResult[player];
 
-                  activePicker === "p1" ? "is-picking" : "",
+                      return (
 
-                  activePicker === "p2" ? "is-waiting" : "",
+                        <article
 
-                ]
+                          key={player}
 
-                  .filter(Boolean)
+                          className={
 
-                  .join(" ")}
+                            player === "p1"
 
-              >
+                              ? "cw-summary-blue"
 
-                <header>
+                              : "cw-summary-pink"
 
-                  <div>
+                          }
 
-                    <span>{t.p1}</span>
+                        >
 
-                    <strong>BLUE MATRIX</strong>
+                          <span>{player === "p1" ? t.p1 : t.p2}</span>
 
-                  </div>
+                          <div className="cw-summary-numbers" aria-label={`${t.survival} ${result.survival}s; ${t.finalCells} ${result.finalCells}`}>
 
+                            <span>◷ {result.survival}s</span>
 
+                            <span>● {result.finalCells}</span>
 
-                  <div>
+                          </div>
 
-                    <small>{t.cells}</small>
+                          <footer>
 
-                    <b>{countAlive(board1)}</b>
+                            <strong>+{result.points} ✦</strong>
 
-                  </div>
+                          </footer>
 
-                </header>
+                        </article>
 
+                      );
 
+                    })}
 
-                {renderBoard("p1", board1)}
+                  </div>
 
+                  <button
 
+                    type="button"
 
-                <footer>
+                    className="cw-primary-button"
 
-                  <span>
+                    onClick={resumeTable}
 
-                    {activePicker === "p1"
+                  >
 
-                      ? `${t.placed} ${countAlive(board1)} / ${MAX_CELLS}`
+                    {t.resume}
 
-                      : activePicker === "p2"
+                  </button>
 
-                        ? t.waiting
+                </section>
 
-                        : conwayPhase === "evolve"
+              </div>
 
-                          ? `${t.aliveTime} ${survival.p1}s`
+            )}
 
-                          : ""}
+          </section>
 
-                  </span>
+        )}
 
+        {view === "end" && (
 
+          <section className="cw-end-screen">
 
-                  {activePicker === "p1" && (
+            <div className="cw-end-card">
 
-                    <button type="button" onClick={nextDraftPhase}>
+              <span className="cw-summary-kicker">{t.matchOver}</span>
 
-                      {t.confirm}
+              <div className="cw-trophy">♔</div>
 
-                    </button>
+              <h1>
 
-                  )}
+                {winner === "p1" ? t.p1 : t.p2} {t.wins}
 
-                </footer>
+              </h1>
 
-              </section>
+              <div className="cw-final-score">
 
+                <strong>{scores.p1}</strong>
 
+                <span>:</span>
 
-              <section className="cw-conway-core">
+                <strong>{scores.p2}</strong>
 
-                <div className="cw-life-mark">∞</div>
+              </div>
 
+              <section
 
+                className="cw-final-competition"
 
-                <span>B3 / S23</span>
+                aria-label="Final competition scores"
 
+              >
 
+                <span>FINAL SCORE</span>
 
-                <strong>
+                <div>
 
-                  {conwayPhase === "ready"
+                  <article className="cw-final-competition-p1">
 
-                    ? "PREPARE"
+                    <small>P1 SCORE</small>
 
-                    : conwayPhase === "p1-pick"
+                    <strong>
 
-                      ? "PLAYER 1"
+                      {finalCompetitionScores?.p1 ?? competitionScores.p1}
 
-                      : conwayPhase === "p2-pick"
+                    </strong>
 
-                        ? "PLAYER 2"
+                  </article>
 
-                        : conwayPhase === "evolve"
+                  <i aria-hidden="true" />
 
-                          ? `GEN ${CONWAY_EVOLVE_SECONDS - conwayTime + 1}`
+                  <article className="cw-final-competition-p2">
 
-                          : "RESULT"}
+                    <small>P2 SCORE</small>
 
-                </strong>
+                    <strong>
 
+                      {finalCompetitionScores?.p2 ?? competitionScores.p2}
 
+                    </strong>
 
-                <small>{t.rule}</small>
+                  </article>
 
-              </section>
+                </div>
 
+              </section>
 
+              <div className="cw-end-actions">
 
-              <section
+                <button type="button" className="cw-primary-button" onClick={returnToLobby}>
 
-                className={[
+                  {t.backEntrance}
 
-                  "cw-board-panel",
+                </button>
 
-                  "cw-board-panel-two",
+              </div>
 
-                  activePicker === "p2" ? "is-picking" : "",
+            </div>
 
-                  activePicker === "p1" ? "is-waiting" : "",
+          </section>
 
-                ]
+        )}
 
-                  .filter(Boolean)
+        {showRules && (
 
-                  .join(" ")}
+          <div className="cw-overlay" onMouseDown={() => setShowRules(false)}>
 
-              >
+            <section
 
-                <header>
+              className="cw-rules-modal"
 
-                  <div>
+              onMouseDown={(event) => event.stopPropagation()}
 
-                    <span>{t.p2}</span>
+            >
 
-                    <strong>MAGENTA MATRIX</strong>
+              <button
 
-                  </div>
+                type="button"
 
+                className="cw-close-button"
 
+                onClick={() => setShowRules(false)}
 
-                  <div>
+              >
 
-                    <small>{t.cells}</small>
+                ×
 
-                    <b>{countAlive(board2)}</b>
+              </button>
 
-                  </div>
+              <span className="cw-summary-kicker">{t.howTo}</span>
 
-                </header>
+              <h2>{t.title}</h2>
 
+              <div className="cw-rules-grid">
 
+                {[
 
-                {renderBoard("p2", board2)}
+                  ["01", t.step1, t.step1Text],
 
+                  ["02", t.step2, t.step2Text],
 
+                  ["03", t.step3, t.step3Text],
 
-                <footer>
+                  ["04", t.step4, t.step4Text],
 
-                  <span>
+                ].map(([number, title, text]) => (
 
-                    {activePicker === "p2"
+                  <article key={number}>
 
-                      ? `${t.placed} ${countAlive(board2)} / ${MAX_CELLS}`
+                    <b>{number}</b>
 
-                      : activePicker === "p1"
+                    <div>
 
-                        ? t.waiting
+                      <strong>{title}</strong>
 
-                        : conwayPhase === "evolve"
+                      <p>{text}</p>
 
-                          ? `${t.aliveTime} ${survival.p2}s`
+                    </div>
 
-                          : ""}
+                  </article>
 
-                  </span>
+                ))}
 
+              </div>
 
+            </section>
 
-                  {activePicker === "p2" && (
+          </div>
 
-                    <button type="button" onClick={nextDraftPhase}>
+        )}
 
-                      {t.confirm}
+        {showLeave && (
 
-                    </button>
+          <div className="cw-overlay" onMouseDown={() => setShowLeave(false)}>
 
-                  )}
+            <section
 
-                </footer>
+              className="cw-leave-modal"
 
-              </section>
+              onMouseDown={(event) => event.stopPropagation()}
 
-            </div>
+            >
 
+              <span className="cw-summary-kicker">{t.backEntrance}</span>
 
+              <h2>{t.pauseTitle}</h2>
 
-            {(conwayPhase === "p1-pick" || conwayPhase === "p2-pick") && (
+              <p>{t.pauseText}</p>
 
-              <div className="cw-auto-confirm">{t.autoConfirm}</div>
+              <div className="cw-modal-actions">
 
-            )}
+                <button
 
+                  type="button"
 
+                  className="cw-secondary-button"
 
-            {conwayPhase === "summary" && challengeResult && (
+                  onClick={() => setShowLeave(false)}
 
-              <div className="cw-summary-overlay">
+                >
 
-                <section className="cw-summary-card">
+                  {t.stay}
 
-                  <span className="cw-summary-kicker">CONWAY COMPLETE</span>
+                </button>
 
+                <button
 
+                  type="button"
 
-                  <h2>{t.challengeDone}</h2>
+                  className="cw-primary-button"
 
+                  onClick={() => {
 
+                    setShowLeave(false);
 
-                  <div className="cw-summary-grid">
+                    setView("entry");
 
-                    {["p1", "p2"].map((player) => {
+                  }}
 
-                      const result = challengeResult[player];
+                >
 
+                  {t.leave}
 
+                </button>
 
-                      return (
+              </div>
 
-                        <article
+            </section>
 
-                          key={player}
+          </div>
 
-                          className={
+        )}
 
-                            player === "p1"
+      </section>
 
-                              ? "cw-summary-blue"
+    </main>
 
-                              : "cw-summary-pink"
-
-                          }
-
-                        >
-
-                          <span>{player === "p1" ? t.p1 : t.p2}</span>
-
-
-
-                          <div>
-
-                            <small>{t.survival}</small>
-
-                            <strong>{result.survival}s</strong>
-
-                          </div>
-
-
-
-                          <div>
-
-                            <small>{t.finalCells}</small>
-
-                            <strong>{result.finalCells}</strong>
-
-                          </div>
-
-
-
-                          <div>
-
-                            <small>{t.bonus}</small>
-
-                            <strong>+{result.bonus}</strong>
-
-                          </div>
-
-
-
-                          <footer>
-
-                            <small>{t.gained}</small>
-
-                            <strong>+{result.points} ✦</strong>
-
-                          </footer>
-
-                        </article>
-
-                      );
-
-                    })}
-
-                  </div>
-
-
-
-                  <button
-
-                    type="button"
-
-                    className="cw-primary-button"
-
-                    onClick={resumeTable}
-
-                  >
-
-                    {t.resume}
-
-                  </button>
-
-                </section>
-
-              </div>
-
-            )}
-
-          </section>
-
-        )}
-
-
-
-        {view === "end" && (
-
-          <section className="cw-end-screen">
-
-            <div className="cw-end-card">
-
-              <span className="cw-summary-kicker">{t.matchOver}</span>
-
-
-
-              <div className="cw-trophy">♔</div>
-
-
-
-              <h1>
-
-                {winner === "p1" ? t.p1 : t.p2} {t.wins}
-
-              </h1>
-
-
-
-              <p>{t.finalScore}</p>
-
-
-
-              <div className="cw-final-score">
-
-                <strong>{scores.p1}</strong>
-
-                <span>:</span>
-
-                <strong>{scores.p2}</strong>
-
-              </div>
-
-
-
-              <div className="cw-end-actions">
-
-                <button
-
-                  type="button"
-
-                  className="cw-primary-button"
-
-                  onClick={startMatch}
-
-                >
-
-                  {t.playAgain}
-
-                </button>
-
-
-
-                <button
-
-                  type="button"
-
-                  className="cw-secondary-button"
-
-                  onClick={() => setView("entry")}
-
-                >
-
-                  {t.backEntrance}
-
-                </button>
-
-              </div>
-
-            </div>
-
-          </section>
-
-        )}
-
-
-
-        {showRules && (
-
-          <div className="cw-overlay" onMouseDown={() => setShowRules(false)}>
-
-            <section
-
-              className="cw-rules-modal"
-
-              onMouseDown={(event) => event.stopPropagation()}
-
-            >
-
-              <button
-
-                type="button"
-
-                className="cw-close-button"
-
-                onClick={() => setShowRules(false)}
-
-              >
-
-                ×
-
-              </button>
-
-
-
-              <span className="cw-summary-kicker">{t.howTo}</span>
-
-              <h2>{t.title}</h2>
-
-
-
-              <div className="cw-rules-grid">
-
-                {[
-
-                  ["01", t.step1, t.step1Text],
-
-                  ["02", t.step2, t.step2Text],
-
-                  ["03", t.step3, t.step3Text],
-
-                  ["04", t.step4, t.step4Text],
-
-                  ["05", t.step5, t.step5Text],
-
-                ].map(([number, title, text]) => (
-
-                  <article key={number}>
-
-                    <b>{number}</b>
-
-
-
-                    <div>
-
-                      <strong>{title}</strong>
-
-                      <p>{text}</p>
-
-                    </div>
-
-                  </article>
-
-                ))}
-
-              </div>
-
-            </section>
-
-          </div>
-
-        )}
-
-
-
-        {showLeave && (
-
-          <div className="cw-overlay" onMouseDown={() => setShowLeave(false)}>
-
-            <section
-
-              className="cw-leave-modal"
-
-              onMouseDown={(event) => event.stopPropagation()}
-
-            >
-
-              <span className="cw-summary-kicker">{t.backEntrance}</span>
-
-
-
-              <h2>{t.pauseTitle}</h2>
-
-              <p>{t.pauseText}</p>
-
-
-
-              <div className="cw-modal-actions">
-
-                <button
-
-                  type="button"
-
-                  className="cw-secondary-button"
-
-                  onClick={() => setShowLeave(false)}
-
-                >
-
-                  {t.stay}
-
-                </button>
-
-
-
-                <button
-
-                  type="button"
-
-                  className="cw-primary-button"
-
-                  onClick={() => {
-
-                    setShowLeave(false);
-
-                    setView("entry");
-
-                  }}
-
-                >
-
-                  {t.leave}
-
-                </button>
-
-              </div>
-
-            </section>
-
-          </div>
-
-        )}
-
-      </section>
-
-    </main>
-
-  );
+  );
 
 }

@@ -1,0 +1,190 @@
+.player-registration {
+  position: fixed;
+  z-index: 1000000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: 24px;
+  color: #f8edce;
+  background:
+    radial-gradient(ellipse at 50% 36%, rgba(49, 61, 105, 0.48), transparent 58%),
+    linear-gradient(145deg, #071126, #020714 72%);
+}
+
+.player-registration-card {
+  width: min(100%, 500px);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: clamp(26px, 5vw, 42px);
+  border: 1px solid rgba(255, 220, 143, 0.38);
+  border-radius: 18px;
+  background:
+    linear-gradient(150deg, rgba(18, 31, 60, 0.96), rgba(5, 12, 30, 0.98));
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.48),
+    0 0 34px rgba(255, 198, 91, 0.1),
+    inset 0 1px rgba(255, 255, 255, 0.08);
+  text-align: center;
+}
+
+.player-registration-eyebrow {
+  color: #f4d991;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.player-registration-card h1 {
+  margin: 14px 0 8px;
+  color: #fff0bd;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(23px, 6vw, 32px);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 18px rgba(255, 210, 110, 0.26);
+}
+
+.player-registration-card > p {
+  color: rgba(237, 229, 209, 0.72);
+  font-size: 14px;
+}
+
+.player-registration-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 22px;
+  text-align: left;
+}
+
+.player-registration-fields {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.player-registration-fields legend {
+  width: 100%;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 220, 143, 0.22);
+  color: #f4d991;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.player-registration-fields label {
+  display: grid;
+  gap: 7px;
+}
+
+.player-registration-fields label > span {
+  color: #e8c979;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.player-registration-fields input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 220, 143, 0.36);
+  border-radius: 8px;
+  outline: none;
+  background: rgba(2, 8, 22, 0.74);
+  color: #fff0bd;
+  font: 16px/1.2 system-ui, sans-serif;
+}
+
+.player-registration-fields input:focus {
+  border-color: #f4d991;
+  box-shadow: 0 0 0 3px rgba(244, 217, 145, 0.13);
+}
+
+.player-registration-fields input[aria-invalid="true"] {
+  border-color: #ff9a8e;
+}
+
+.player-registration-fields small {
+  color: #ff9a8e;
+  font-size: 12px;
+}
+
+.player-registration-api-error {
+  margin: 0;
+  color: #ffaca2;
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.player-registration-submit,
+.player-registration-back {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  transition: transform 0.16s ease, filter 0.16s ease;
+}
+
+.player-registration-submit {
+  margin-top: 2px;
+  border: 1px solid rgba(255, 239, 184, 0.9);
+  background: linear-gradient(180deg, #fff0b2, #dba83f);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 18px rgba(255, 197, 82, 0.14);
+  color: #251a08;
+}
+
+.player-registration-back {
+  margin-top: 12px;
+  border: 1px solid rgba(255, 220, 143, 0.26);
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(248, 237, 206, 0.82);
+}
+
+.player-registration-submit:hover,
+.player-registration-back:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.player-registration-submit:disabled,
+.player-registration-back:disabled {
+  cursor: wait;
+  filter: saturate(0.55);
+  opacity: 0.62;
+  transform: none;
+}
+
+.player-registration-submit:focus-visible,
+.player-registration-back:focus-visible {
+  outline: 2px solid #fff0bd;
+  outline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+  .player-registration {
+    padding: 16px;
+  }
+
+  .player-registration-card {
+    padding: 24px 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-registration-submit,
+  .player-registration-back {
+    transition: none;
+  }
+}

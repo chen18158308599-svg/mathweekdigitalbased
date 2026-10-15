@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./DealOrNoDeal.css";
+import {
+  calculateDealScore,
+  createCompetitionAttempt,
+} from "../../scoring/competitionScoring.js";
 
 import homeBackground from "../../assets/home-layers/background.png";
 import dealIsland from "../../assets/home-layers/deal.png";
@@ -12,6 +16,7 @@ const VIEW_H = 900;
 const START_COINS = 900;
 const START_AMMO = 10;
 const PLAYER_MAX_HP = 120;
+const BEST_COINS_STORAGE_KEY = "high-seas-four-seas-best-coins-v1";
 
 const AMMO_PACK_COST = 300;
 const AMMO_PACK_SIZE = 5;
@@ -22,6 +27,12 @@ const PLAYER_SPEED = 185;
 const PLAYER_BULLET_SPEED = 820;
 const PLAYER_FIRE_COOLDOWN = 0.42;
 const PLAYER_DAMAGE = 32;
+
+// Failsafe: if there is no ammunition AND not enough money to buy it,
+// use a slower, weaker emergency cannon. It never consumes coins.
+// Regular purchased cannonballs remain significantly stronger.
+const EMERGENCY_DAMAGE = 24;
+const EMERGENCY_FIRE_COOLDOWN = 1.08;
 
 const CHEST_RANGE = 125;
 const BULLET_HIT_RANGE = 38;
@@ -84,171 +95,144 @@ const PIRATE_TYPES = {
 
 const COPY = {
   zh: {
-    topEyebrow: "MATH WEEK 2026 · 概率远征",
+    topEyebrow: "MATH WEEK 2026",
     title: "海上抉择",
-    englishTitle: "DEAL OR NO DEAL · HIGH SEAS",
-    badge: "概率 · 风险 · 决策",
-    intro:
-      "驶入扩张后的海域，在安全航道寻找漂流宝箱。每个宝箱会先公开 3 个可能金币结果，再由你决定是否支付开箱费。",
-    intro2:
-      "不同海盗船拥有不同生命值、伤害与射速。炮弹更昂贵，必须在宝箱、赏金、补给与修复之间做真正的资源决策。",
-    enter: "进入海域",
+    englishTitle: "DEAL OR NO DEAL",
+    badge: "四片海域",
+    intro: "开宝箱 · 击沉所有海盗",
+    enter: "开始游戏",
     guide: "玩法",
-    best: "最佳返航金币",
+    best: "最高金币",
     language: "中/EN",
-
-    mission: "当前任务",
-    missionText: "探索扩张海图 · 清除五片危险海域",
+    mission: "击沉进度",
     coins: "金币",
     ammo: "炮弹",
-    pirates: "海盗",
+    pirates: "击沉",
     hull: "船体",
-
-    buyAmmo: `补给 +${AMMO_PACK_SIZE}`,
-    buyAmmoCost: `${AMMO_PACK_COST} 金币`,
-    repair: `修复 +${REPAIR_AMOUNT} HP`,
-    repairCost: `${REPAIR_COST} 金币`,
-    repairFull: "船体已满",
-    repairBought: "紧急修复完成",
-    repairNoMoney: "金币不足，无法修复船体。",
+    competitionScore: "积分",
+    finalScore: "竞赛得分",
+    buyAmmo: "+5 炮弹",
+    buyAmmoCost: "◈300",
+    repair: "+35 HP",
+    repairCost: "◈420",
+    repairFull: "血量已满",
+    repairBought: "修复",
+    repairNoMoney: "金币不足",
     fire: "开炮",
-    autoAim: "战区自动瞄准",
-    fireLocked: "进入海盗海域后才能锁定目标",
-
-    inspect: "查看宝箱",
-    chestNearby: "发现安全航道宝箱",
-    chestCost: "开箱费用",
-    possibleRewards: "可能获得",
-    oneOfThree: "其中 1 种结果",
-    openChest: "DEAL · 打开",
-    leaveChest: "NO DEAL · 离开",
-    continueSailing: "收下结果 · 继续航行",
-    chestOpened: "宝箱结果",
-    reward: "获得金币",
-    netGain: "净收益",
-    netLoss: "净损失",
+    fireLocked: "靠近海盗",
+    inspect: "开宝箱",
+    chestCost: "开箱",
+    possibleRewards: "宝箱奖励",
+    oneOfThree: "随机获得其中一项",
+    openChest: "开箱",
+    leaveChest: "跳过",
+    continueSailing: "继续航行",
+    chestOpened: "开箱结果",
+    reward: "获得",
+    netGain: "净赚",
+    netLoss: "净亏",
     notEnough: "金币不足",
-
-    safeMessage: "安全航道 · 宝箱位于海盗警戒区外",
-    warningMessage: "⚠ 已进入海盗警戒海域",
-    noAmmo: "炮弹用完了，请购买补给。",
-    ammoBought: `补给完成 · +${AMMO_PACK_SIZE} 发炮弹`,
-    ammoNoMoney: "金币不足，无法购买炮弹。",
-    pirateDown: "海盗船已击沉",
+    warningMessage: "危险海域",
+    noAmmo: "补充炮弹",
+    emergencyActive: "⚡ 免费火炮",
+    emergencyLabel: "免费开炮",
+    emergencyInfo: "免费 · 低伤害",
+    ammoBought: "+5 炮弹",
+    ammoNoMoney: "金币不足",
+    pirateDown: "击沉",
     bounty: "赏金",
-
-    controls: "左侧摇杆航行",
-    keyboard: "WASD / 方向键移动 · Space 开炮 · Q 补给 · H 修复 · E 查看宝箱",
+    controls: "摇杆航行",
+    keyboard: "WASD · SPACE · E · Q · H",
     map: "海图",
     safeRoute: "安全航道",
-
-    victory: "海域已肃清",
-    victoryText: "五片危险海域全部清除。你成功完成这次高风险远征。",
-    defeat: "船体沉没",
-    defeatText: "你的船失去战斗能力。重新规划炮弹、金币与修复时机后再次挑战。",
-    retry: "重新出海",
-    backIntro: "返回航海入口",
-
-    leaveTitle: "结束本次航行？",
-    leaveText: "当前海域进度不会保留。",
-    stay: "继续航行",
-    leave: "结束并返回",
-
-    howTo: "航海手册",
-    step1: "更大的海域",
-    step1Text: "海图扩大至 4800 × 3000。五片危险海域分布更开，必须真正探索与规划路线。",
-    step2: "不同海盗船",
-    step2Text: "掠夺艇、海盗战舰、炮击舰、无畏舰拥有不同生命值、伤害、射速与赏金。",
-    step3: "昂贵炮弹",
-    step3Text: `每次补给只有 ${AMMO_PACK_SIZE} 发，但需要 ${AMMO_PACK_COST} 金币。一个宝箱无法支撑整场战斗。`,
-    step4: "金币修复",
-    step4Text: `花费 ${REPAIR_COST} 金币可恢复 ${REPAIR_AMOUNT} HP。修复与买炮弹共用金币，需要取舍。`,
-    step5: "危险区火力",
-    step5Text: "后期危险海域会有多艘海盗同时开火。必要时可以撤出警戒区，重新整备后再进入。",
+    victory: "挑战成功",
+    defeat: "船已沉没",
+    retry: "再来一次",
+    backIntro: "返回",
+    leaveTitle: "结束航行？",
+    stay: "继续",
+    leave: "退出",
+    howTo: "玩法一览",
+    step1: "航行",
+    step1Text: "摇杆 / WASD",
+    step2: "开宝箱",
+    step2Text: "付金币，随机得一项奖励",
+    step3: "开炮",
+    step3Text: "靠近海盗，按键开炮",
+    step4: "免费应急炮",
+    step4Text: "没钱又没炮弹时可免费开炮",
+    step5: "补给 / 修复",
+    step5Text: "◈300 买 5 弹 · ◈420 修 35 HP",
   },
-
   en: {
-    topEyebrow: "MATH WEEK 2026 · PROBABILITY EXPEDITION",
-    title: "High Seas Gamble",
-    englishTitle: "DEAL OR NO DEAL · HIGH SEAS",
-    badge: "PROBABILITY · RISK · DECISION",
-    intro:
-      "Sail through a much larger sea and search safe routes for drifting treasure. Every chest reveals three possible coin outcomes before you decide whether to pay its price.",
-    intro2:
-      "Pirate classes now have different hull strength, damage and fire rate. Cannonballs are expensive, so treasure, bounties, resupply and repairs all compete for the same coins.",
-    enter: "Enter the Sea",
-    guide: "Guide",
-    best: "Best return coins",
+    topEyebrow: "MATH WEEK 2026",
+    title: "High Seas",
+    englishTitle: "DEAL OR NO DEAL",
+    badge: "FOUR SEAS",
+    intro: "Open chests · Sink all pirates",
+    enter: "PLAY NOW",
+    guide: "HOW TO PLAY",
+    best: "BEST COINS",
     language: "中/EN",
-
-    mission: "MISSION",
-    missionText: "Explore the expanded chart · clear five hostile seas",
-    coins: "Coins",
-    ammo: "Cannonballs",
-    pirates: "Pirates",
-    hull: "Hull",
-
-    buyAmmo: `Resupply +${AMMO_PACK_SIZE}`,
-    buyAmmoCost: `${AMMO_PACK_COST} coins`,
-    repair: `Repair +${REPAIR_AMOUNT} HP`,
-    repairCost: `${REPAIR_COST} coins`,
-    repairFull: "Hull already full",
-    repairBought: "Emergency repair complete",
-    repairNoMoney: "Not enough coins to repair the hull.",
+    mission: "SUNK",
+    coins: "COINS",
+    ammo: "AMMO",
+    pirates: "SUNK",
+    hull: "HULL",
+    competitionScore: "SCORE",
+    finalScore: "FINAL SCORE",
+    buyAmmo: "+5 AMMO",
+    buyAmmoCost: "◈300",
+    repair: "+35 HP",
+    repairCost: "◈420",
+    repairFull: "Full HP",
+    repairBought: "Repaired",
+    repairNoMoney: "Not enough coins",
     fire: "FIRE",
-    autoAim: "ZONE AUTO-AIM",
-    fireLocked: "Enter hostile waters to lock a target",
-
-    inspect: "Inspect Chest",
-    chestNearby: "Safe-route treasure nearby",
-    chestCost: "Opening cost",
-    possibleRewards: "Possible outcomes",
-    oneOfThree: "1 of 3 outcomes",
-    openChest: "DEAL · Open",
-    leaveChest: "NO DEAL · Leave",
-    continueSailing: "Take Result · Keep Sailing",
-    chestOpened: "Chest Result",
-    reward: "Coins won",
-    netGain: "Net gain",
-    netLoss: "Net loss",
+    fireLocked: "Find pirates",
+    inspect: "OPEN CHEST",
+    chestCost: "COST",
+    possibleRewards: "POSSIBLE LOOT",
+    oneOfThree: "ONE RANDOM REWARD",
+    openChest: "OPEN",
+    leaveChest: "SKIP",
+    continueSailing: "CONTINUE",
+    chestOpened: "CHEST OPENED",
+    reward: "WON",
+    netGain: "PROFIT",
+    netLoss: "LOSS",
     notEnough: "Not enough coins",
-
-    safeMessage: "Safe route · treasure stays outside hostile waters",
-    warningMessage: "⚠ Entered hostile pirate waters",
-    noAmmo: "Out of cannonballs. Buy a resupply.",
-    ammoBought: `Resupplied · +${AMMO_PACK_SIZE} cannonballs`,
-    ammoNoMoney: "Not enough coins for cannonballs.",
-    pirateDown: "Pirate ship sunk",
-    bounty: "Bounty",
-
-    controls: "Left joystick to sail",
-    keyboard: "WASD / arrows move · Space fire · Q resupply · H repair · E inspect chest",
-    map: "CHART",
+    warningMessage: "HOSTILE WATERS",
+    noAmmo: "Buy ammo",
+    emergencyActive: "⚡ Free cannon",
+    emergencyLabel: "FREE FIRE",
+    emergencyInfo: "FREE · LOW POWER",
+    ammoBought: "+5 AMMO",
+    ammoNoMoney: "Not enough coins",
+    pirateDown: "SUNK",
+    bounty: "BOUNTY",
+    controls: "Sail with joystick",
+    keyboard: "WASD · SPACE · E · Q · H",
+    map: "MAP",
     safeRoute: "SAFE ROUTE",
-
-    victory: "Sea Cleared",
-    victoryText: "All five hostile seas are clear. You completed the high-risk expedition successfully.",
-    defeat: "Ship Sunk",
-    defeatText: "Your ship can no longer fight. Rebalance ammo, coins and repair timing before trying again.",
-    retry: "Sail Again",
-    backIntro: "Back to Entrance",
-
-    leaveTitle: "End this voyage?",
-    leaveText: "Current sea progress will not be saved.",
-    stay: "Keep Sailing",
-    leave: "End Voyage",
-
-    howTo: "Voyage Guide",
-    step1: "Expanded Sea",
-    step1Text: "The world is now 4800 × 3000 with five hostile seas spread much farther apart, so route planning matters.",
-    step2: "Pirate Classes",
-    step2Text: "Raiders, Corsairs, Gunships and Dreadnoughts have different HP, damage, fire rate and bounties.",
-    step3: "Expensive Ammo",
-    step3Text: `A resupply gives only ${AMMO_PACK_SIZE} cannonballs for ${AMMO_PACK_COST} coins. One lucky chest cannot fund the whole battle.`,
-    step4: "Paid Repair",
-    step4Text: `Spend ${REPAIR_COST} coins to restore ${REPAIR_AMOUNT} HP. Repairs and ammo compete for the same budget.`,
-    step5: "Crossfire",
-    step5Text: "Later hostile seas allow multiple pirates to fire at once. Retreat out of the warning zone if you need to recover.",
+    victory: "VICTORY",
+    defeat: "SHIP SUNK",
+    retry: "PLAY AGAIN",
+    backIntro: "BACK",
+    leaveTitle: "End voyage?",
+    stay: "STAY",
+    leave: "EXIT",
+    howTo: "HOW TO PLAY",
+    step1: "SAIL",
+    step1Text: "Joystick / WASD",
+    step2: "CHESTS",
+    step2Text: "Pay coins for 1 random reward",
+    step3: "FIRE",
+    step3Text: "Auto-aim · press to fire",
+    step4: "FREE CANNON",
+    step4Text: "Free fire when out of ammo & coins",
+    step5: "SUPPLY / REPAIR",
+    step5Text: "◈300: 5 ammo · ◈420: 35 HP",
   },
 };
 
@@ -337,6 +321,13 @@ const PIRATE_LAYOUT = [
   { id: 15, regionId: "storm", type: "dreadnought", baseX: 3480, baseY: 2640, patrolRadius: 64, patrolSpeed: 0.2, phase: 4.8 },
 ];
 
+// Activate four seas and only the pirate ships located inside them.
+// The fifth predefined sea remains disabled until a future expansion.
+const ACTIVE_SEA_REGIONS = SEA_REGIONS.slice(0, 4);
+const ACTIVE_PIRATE_LAYOUT = PIRATE_LAYOUT.filter((pirate) =>
+  ACTIVE_SEA_REGIONS.some((region) => region.id === pirate.regionId)
+);
+
 const MAP_DECOR = [
   { id: "reef-a", x: 180, y: 250, size: 155 },
   { id: "reef-b", x: 760, y: 1320, size: 180 },
@@ -386,7 +377,7 @@ function createGame() {
       reward: chest.options[Math.floor(Math.random() * chest.options.length)],
       opened: false,
     })),
-    pirates: PIRATE_LAYOUT.map((pirate) => {
+    pirates: ACTIVE_PIRATE_LAYOUT.map((pirate) => {
       const type = PIRATE_TYPES[pirate.type];
       const x = pirate.baseX + Math.cos(pirate.phase) * pirate.patrolRadius;
       const y = pirate.baseY + Math.sin(pirate.phase) * pirate.patrolRadius;
@@ -417,7 +408,7 @@ function createGame() {
 
 function readBest() {
   try {
-    return Number(localStorage.getItem("high-seas-best-coins-v4")) || 0;
+    return Number(localStorage.getItem(BEST_COINS_STORAGE_KEY)) || 0;
   } catch {
     return 0;
   }
@@ -425,7 +416,7 @@ function readBest() {
 
 function saveBest(value) {
   try {
-    localStorage.setItem("high-seas-best-coins-v4", String(value));
+    localStorage.setItem(BEST_COINS_STORAGE_KEY, String(value));
   } catch {
     // localStorage is optional.
   }
@@ -479,13 +470,7 @@ function ChestGraphic({ opened = false }) {
 }
 
 export default function DealOrNoDeal({ onBack }) {
-  const [language, setLanguage] = useState(() => {
-    try {
-      return localStorage.getItem("high-seas-language-v4") === "en" ? "en" : "zh";
-    } catch {
-      return "zh";
-    }
-  });
+  const [language, setLanguage] = useState("en");
 
   const [view, setView] = useState("entry");
   const [game, setGame] = useState(createGame);
@@ -495,11 +480,14 @@ export default function DealOrNoDeal({ onBack }) {
   const [chestResult, setChestResult] = useState(null);
   const [bestCoins, setBestCoins] = useState(readBest);
   const [joystickVisual, setJoystickVisual] = useState({ x: 0, y: 0 });
+  const [competitionFinal, setCompetitionFinal] = useState(null);
 
   const joystickRef = useRef({ x: 0, y: 0, active: false, pointerId: null });
   const keysRef = useRef(new Set());
   const bulletIdRef = useRef(1);
   const effectIdRef = useRef(1);
+  const competitionAttemptRef = useRef(null);
+  const competitionFinalRef = useRef(null);
 
   const t = COPY[language];
 
@@ -520,6 +508,9 @@ export default function DealOrNoDeal({ onBack }) {
   const startGame = useCallback(() => {
     bulletIdRef.current = 1;
     effectIdRef.current = 1;
+    competitionAttemptRef.current = createCompetitionAttempt("deal-or-no-deal");
+    competitionFinalRef.current = null;
+    setCompetitionFinal(null);
     resetControls();
     setGame(createGame());
     setChestDialog(null);
@@ -555,14 +546,14 @@ export default function DealOrNoDeal({ onBack }) {
 
   const activeRegionIds = useMemo(
     () =>
-      SEA_REGIONS.filter(
+      ACTIVE_SEA_REGIONS.filter(
         (region) => distance(game.player, region) <= region.radius + PIRATE_ACTIVATION_PADDING
       ).map((region) => region.id),
     [game.player]
   );
 
   const activeRegion = useMemo(
-    () => SEA_REGIONS.find((region) => activeRegionIds.includes(region.id)) ?? null,
+    () => ACTIVE_SEA_REGIONS.find((region) => activeRegionIds.includes(region.id)) ?? null,
     [activeRegionIds]
   );
 
@@ -634,7 +625,7 @@ export default function DealOrNoDeal({ onBack }) {
           ...prev.player,
           coins: prev.player.coins - selectedChest.cost + selectedChest.reward,
         },
-        message: net >= 0 ? `${t.netGain} +${net}` : `${t.netLoss} ${net}`,
+        message: net >= 0 ? `◈ +${net}` : `◈ ${net}`,
         messageTone: net >= 0 ? "success" : "danger",
         messageTimer: 2.4,
         effects: [
@@ -668,8 +659,8 @@ export default function DealOrNoDeal({ onBack }) {
       if (prev.player.coins < AMMO_PACK_COST) {
         return {
           ...prev,
-          message: t.ammoNoMoney,
-          messageTone: "danger",
+          message: prev.player.ammo === 0 ? t.emergencyActive : t.ammoNoMoney,
+          messageTone: prev.player.ammo === 0 ? "warning" : "danger",
           messageTimer: 2.2,
         };
       }
@@ -719,7 +710,7 @@ export default function DealOrNoDeal({ onBack }) {
           coins: prev.player.coins - REPAIR_COST,
           hp: Math.min(prev.player.maxHp, prev.player.hp + REPAIR_AMOUNT),
         },
-        message: `${t.repairBought} · +${healed} HP`,
+        message: `✚ +${healed} HP`,
         messageTone: "success",
         messageTimer: 2.2,
         effects: [
@@ -743,7 +734,7 @@ export default function DealOrNoDeal({ onBack }) {
     setGame((prev) => {
       if (prev.status !== "playing" || prev.player.shotCooldown > 0) return prev;
 
-      const regionIds = SEA_REGIONS.filter(
+      const regionIds = ACTIVE_SEA_REGIONS.filter(
         (region) => distance(prev.player, region) <= region.radius + PIRATE_ACTIVATION_PADDING
       ).map((region) => region.id);
 
@@ -760,11 +751,14 @@ export default function DealOrNoDeal({ onBack }) {
         };
       }
 
-      if (prev.player.ammo <= 0) {
+      // Never trap a player with no money and no ammunition.
+      // Emergency rounds cost nothing but are weaker and fire more slowly.
+      const emergency = prev.player.ammo <= 0 && prev.player.coins < AMMO_PACK_COST;
+      if (prev.player.ammo <= 0 && !emergency) {
         return {
           ...prev,
           message: t.noAmmo,
-          messageTone: "danger",
+          messageTone: "warning",
           messageTimer: 2,
         };
       }
@@ -778,8 +772,8 @@ export default function DealOrNoDeal({ onBack }) {
         ...prev,
         player: {
           ...prev.player,
-          ammo: prev.player.ammo - 1,
-          shotCooldown: PLAYER_FIRE_COOLDOWN,
+          ammo: emergency ? 0 : prev.player.ammo - 1,
+          shotCooldown: emergency ? EMERGENCY_FIRE_COOLDOWN : PLAYER_FIRE_COOLDOWN,
         },
         bullets: [
           ...prev.bullets,
@@ -788,7 +782,8 @@ export default function DealOrNoDeal({ onBack }) {
             owner: "player",
             regionId: target.regionId,
             targetId: target.id,
-            damage: PLAYER_DAMAGE,
+            damage: emergency ? EMERGENCY_DAMAGE : PLAYER_DAMAGE,
+            emergency,
             x: muzzleX,
             y: muzzleY,
             vx: Math.cos(fireAngle) * PLAYER_BULLET_SPEED,
@@ -917,7 +912,7 @@ export default function DealOrNoDeal({ onBack }) {
           player.angle = toDeg(Math.atan2(moveY, moveX)) + 90;
         }
 
-        const activeRegionsNow = SEA_REGIONS.filter(
+        const activeRegionsNow = ACTIVE_SEA_REGIONS.filter(
           (region) => distance(player, region) <= region.radius + PIRATE_ACTIVATION_PADDING
         );
         const regionIdsNow = activeRegionsNow.map((region) => region.id);
@@ -1052,7 +1047,7 @@ export default function DealOrNoDeal({ onBack }) {
                 if (sunk) {
                   player.coins += pirate.bounty;
                   sunkCount += 1;
-                  message = `${t.pirateDown} · ${t.bounty} +${pirate.bounty}`;
+                  message = `☠ +${pirate.bounty} ◈`;
                   messageTone = "success";
                   messageTimer = 2.4;
                 }
@@ -1127,6 +1122,37 @@ export default function DealOrNoDeal({ onBack }) {
     saveBest(game.player.coins);
   }, [bestCoins, game.player.coins, game.status, view]);
 
+  const liveCompetitionScore = useMemo(
+    () =>
+      calculateDealScore({
+        piratesSunk: game.sunkCount,
+        coins: game.player.coins,
+        hp: game.player.hp,
+        victory: game.status === "victory",
+      }),
+    [game.player.coins, game.player.hp, game.status, game.sunkCount]
+  );
+
+  useEffect(() => {
+    if (
+      view !== "game" ||
+      game.status === "playing" ||
+      competitionFinalRef.current ||
+      !competitionAttemptRef.current
+    ) {
+      return;
+    }
+
+    const result = competitionAttemptRef.current.finalize({
+      playerSlot: "single",
+      finalScore: liveCompetitionScore,
+      outcome: game.status === "victory" ? "win" : "loss",
+    });
+
+    competitionFinalRef.current = result;
+    setCompetitionFinal(result);
+  }, [game.status, liveCompetitionScore, view]);
+
   const updateJoystick = useCallback((event) => {
     const node = event.currentTarget;
     const rect = node.getBoundingClientRect();
@@ -1178,10 +1204,11 @@ export default function DealOrNoDeal({ onBack }) {
     [resetControls]
   );
 
-  const livingPirates = game.pirates.filter((pirate) => !pirate.sunk).length;
   const warning = activeRegionIds.length > 0;
   const canFire = combatTargets.length > 0 && game.status === "playing";
+  const emergencyReady = game.player.ammo === 0 && game.player.coins < AMMO_PACK_COST;
   const repairDisabled = game.status !== "playing" || game.player.hp >= game.player.maxHp;
+  const competitionScore = competitionFinal?.finalScore ?? liveCompetitionScore;
 
   return (
     <main className="deal-page high-seas-page hs4-page">
@@ -1197,37 +1224,32 @@ export default function DealOrNoDeal({ onBack }) {
             <header className="hs4-entry-topbar">
               <div>
                 <span>{t.topEyebrow}</span>
-                <strong>Deal or No Deal · High Seas</strong>
+                <strong>DEAL OR NO DEAL</strong>
               </div>
               <nav>
                 <button type="button" onClick={() => setLanguage((value) => (value === "zh" ? "en" : "zh"))}>
                   {t.language}
                 </button>
-                <button type="button" onClick={() => setShowRules(true)}>? {t.guide}</button>
+                <button type="button" onClick={() => setShowRules(true)} title={t.guide} aria-label={t.guide}>?</button>
               </nav>
             </header>
 
             <div className="hs4-entry-layout">
               <section className="hs4-entry-copy">
-                <span className="hs4-entry-badge">{t.badge}</span>
+                <span className="hs4-entry-badge">⚓ {t.badge}</span>
                 <h1>{t.title}</h1>
-                <h2>{t.englishTitle}</h2>
-                <p>{t.intro}</p>
-                <p className="hs4-entry-sub">{t.intro2}</p>
+                <p className="hs4-entry-tagline">{t.intro}</p>
 
-                <div className="hs4-entry-pills">
-                  <span>4 {language === "zh" ? "种海盗" : "PIRATE CLASSES"}</span>
-                  <span>5 {language === "zh" ? "片危险海域" : "HOSTILE SEAS"}</span>
-                  <span>4800 × 3000</span>
+                <div className="hs4-entry-stats" aria-label={language === "zh" ? "四片海域，十二艘海盗船，十二个宝箱" : "Four seas, twelve pirates, twelve chests"}>
+                  <div><i aria-hidden="true">◉</i><strong>4</strong><small>{language === "zh" ? "海域" : "SEAS"}</small></div>
+                  <div><i aria-hidden="true">☠</i><strong>{ACTIVE_PIRATE_LAYOUT.length}</strong><small>{language === "zh" ? "海盗" : "PIRATES"}</small></div>
+                  <div><i aria-hidden="true">◆</i><strong>{CHEST_LAYOUT.length}</strong><small>{language === "zh" ? "宝箱" : "CHESTS"}</small></div>
                 </div>
 
                 <button type="button" className="hs4-entry-start" onClick={startGame}>
-                  <span>{t.enter}</span><b>✦</b>
+                  <span>{t.enter}</span><b>➜</b>
                 </button>
-
-                <small className="hs4-entry-record">
-                  {t.best} · <strong>{bestCoins ? bestCoins.toLocaleString() : "—"}</strong>
-                </small>
+                <small className="hs4-entry-record">◈ {t.best}: <strong>{bestCoins ? bestCoins.toLocaleString() : "—"}</strong></small>
               </section>
 
               <section className="hs4-entry-island" aria-hidden="true">
@@ -1262,16 +1284,16 @@ export default function DealOrNoDeal({ onBack }) {
                 >
                   ←
                 </button>
-                <div className="hs4-mission">
-                  <span>{t.mission}</span>
-                  <strong>{t.missionText}</strong>
+                <div className="hs4-mission" title={t.mission} aria-label={`${t.mission} ${game.sunkCount} / ${ACTIVE_PIRATE_LAYOUT.length}`}>
+                  <span className="hs4-mission-icon" aria-hidden="true">☠</span>
+                  <strong>{game.sunkCount}<em>/{ACTIVE_PIRATE_LAYOUT.length}</em></strong>
                 </div>
               </div>
 
               <div className="hs4-resource-row">
                 <div className="hs4-resource"><i>◈</i><div><span>{t.coins}</span><strong>{game.player.coins.toLocaleString()}</strong></div></div>
-                <div className="hs4-resource"><i>●</i><div><span>{t.ammo}</span><strong>{game.player.ammo}</strong></div></div>
-                <div className="hs4-resource"><i>☠</i><div><span>{t.pirates}</span><strong>{livingPirates}</strong></div></div>
+                <div className={`hs4-resource ${emergencyReady ? "is-emergency" : ""}`}><i>●</i><div><span>{emergencyReady ? t.emergencyLabel : t.ammo}</span><strong>{emergencyReady ? "∞" : game.player.ammo}</strong></div></div>
+                <div className="hs4-resource hs4-score-resource"><i>★</i><div><span>{t.competitionScore}</span><strong>{competitionScore.toLocaleString()}</strong></div></div>
                 <button type="button" className="hs4-language-button" onClick={() => setLanguage((value) => (value === "zh" ? "en" : "zh"))}>
                   {language === "zh" ? "EN" : "中"}
                 </button>
@@ -1285,7 +1307,7 @@ export default function DealOrNoDeal({ onBack }) {
                 <div key={decor.id} className="hs4-reef" style={{ ...worldStyle(decor.x, decor.y), width: `${(decor.size / VIEW_W) * 100}%` }} />
               ))}
 
-              {SEA_REGIONS.map((region) => {
+              {ACTIVE_SEA_REGIONS.map((region) => {
                 const aliveInRegion = game.pirates.filter((pirate) => pirate.regionId === region.id && !pirate.sunk).length;
                 const active = activeRegionIds.includes(region.id);
                 return (
@@ -1301,7 +1323,7 @@ export default function DealOrNoDeal({ onBack }) {
                   >
                     <div className="hs4-zone-label">
                       <span>{language === "zh" ? region.zh : region.en}</span>
-                      <strong>{aliveInRegion === 0 ? "CLEARED" : `☠ ${aliveInRegion} · ×${region.maxAttackers}`}</strong>
+                      <strong>{aliveInRegion === 0 ? "✓" : `☠ ${aliveInRegion}`}</strong>
                     </div>
                     <i className="hs4-zone-ring ring-a" />
                     <i className="hs4-zone-ring ring-b" />
@@ -1341,12 +1363,8 @@ export default function DealOrNoDeal({ onBack }) {
 
                     {!pirate.sunk && (
                       <>
-                        <div className="hs4-enemy-card">
-                          <span>{language === "zh" ? type.zh : type.en}</span>
-                          <b>{pirate.damage} DMG</b>
-                        </div>
-                        <div className="hs4-enemy-health"><i style={{ width: `${(pirate.hp / pirate.maxHp) * 100}%` }} /></div>
-                        <span className="hs4-bounty">◈ {pirate.bounty}</span>
+                        <div className="hs4-enemy-health" title={`${language === "zh" ? type.zh : type.en} · ${pirate.hp}/${pirate.maxHp} HP`}><i style={{ width: `${(pirate.hp / pirate.maxHp) * 100}%` }} /></div>
+                        {isTarget && <span className="hs4-bounty">◈ {pirate.bounty}</span>}
                         {isTarget && <span className="hs4-target-reticle" />}
                       </>
                     )}
@@ -1357,7 +1375,7 @@ export default function DealOrNoDeal({ onBack }) {
               {game.bullets.map((bullet) => (
                 <i
                   key={bullet.id}
-                  className={`hs4-cannonball ${bullet.owner} ${bullet.pirateType ? `type-${bullet.pirateType}` : ""}`}
+                  className={`hs4-cannonball ${bullet.owner} ${bullet.emergency ? "emergency" : ""} ${bullet.pirateType ? `type-${bullet.pirateType}` : ""}`}
                   style={worldStyle(bullet.x, bullet.y)}
                 />
               ))}
@@ -1382,7 +1400,7 @@ export default function DealOrNoDeal({ onBack }) {
             </div>
 
             <aside className="hs4-minimap">
-              <header><span>{t.map}</span><strong>{activeRegion ? (language === "zh" ? activeRegion.zh : activeRegion.en) : t.safeRoute}</strong></header>
+              <header><span>◉ {t.map}</span><strong>{activeRegion ? (language === "zh" ? activeRegion.zh : activeRegion.en) : "✓"}</strong></header>
               <div className="hs4-minimap-body">
                 <span
                   className="hs4-mini-camera"
@@ -1393,7 +1411,7 @@ export default function DealOrNoDeal({ onBack }) {
                     height: `${(VIEW_H / WORLD_H) * 100}%`,
                   }}
                 />
-                {SEA_REGIONS.map((region) => (
+                {ACTIVE_SEA_REGIONS.map((region) => (
                   <i
                     key={region.id}
                     className={`hs4-mini-zone ${activeRegionIds.includes(region.id) ? "is-active" : ""}`}
@@ -1419,16 +1437,15 @@ export default function DealOrNoDeal({ onBack }) {
               <div className="hs4-hull-track"><i style={{ width: `${(game.player.hp / game.player.maxHp) * 100}%` }} /></div>
             </section>
 
-            <div className={`hs4-zone-status ${warning ? "danger" : "safe"}`}>
-              <i />
-              <span>{warning ? t.warningMessage : t.safeMessage}</span>
-            </div>
+            {warning && game.status === "playing" && (
+              <div className="hs4-zone-status danger" role="status"><i /><span>{t.warningMessage}</span></div>
+            )}
 
             {game.message && <div className={`hs4-message tone-${game.messageTone}`}>{game.message}</div>}
 
             {nearestChest && !chestDialog && game.status === "playing" && (
               <button type="button" className="hs4-nearby-chest" onClick={inspectChest}>
-                <span>◆</span><div><small>{t.chestNearby}</small><strong>{t.inspect}</strong></div><b>→</b>
+                <span>◆</span><strong>{t.inspect}</strong><b>→</b>
               </button>
             )}
 
@@ -1445,47 +1462,60 @@ export default function DealOrNoDeal({ onBack }) {
             </div>
 
             <div className="hs4-combat-panel">
-              <button type="button" className="hs4-action-button ammo" onClick={buyAmmo} disabled={game.status !== "playing"}>
-                <span>●</span><div><strong>{t.buyAmmo}</strong><small>{t.buyAmmoCost}</small></div><b>{game.player.ammo}</b>
-              </button>
-
-              <button type="button" className="hs4-action-button repair" onClick={repairHull} disabled={repairDisabled}>
-                <span>✚</span><div><strong>{t.repair}</strong><small>{game.player.hp >= game.player.maxHp ? t.repairFull : t.repairCost}</small></div><b>{game.player.hp}</b>
+              <button
+                type="button"
+                className="hs4-action-button ammo"
+                onClick={buyAmmo}
+                disabled={game.status !== "playing" || game.player.coins < AMMO_PACK_COST}
+                aria-label={`${language === "zh" ? "购买" : "Buy"} ${AMMO_PACK_SIZE} ${t.ammo}, ${AMMO_PACK_COST} ${t.coins}`}
+                title={`${t.buyAmmo} ${t.ammo} · ${t.buyAmmoCost}`}
+              >
+                <span>●</span><div><strong>{t.buyAmmo}</strong><small>{t.buyAmmoCost}</small></div>
               </button>
 
               <button
                 type="button"
-                className={`hs4-fire-button ${!canFire ? "is-locked" : ""}`}
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                  shoot();
-                }}
-                disabled={game.status !== "playing"}
+                className="hs4-action-button repair"
+                onClick={repairHull}
+                disabled={repairDisabled || game.player.coins < REPAIR_COST}
+                aria-label={`${language === "zh" ? "修复" : "Repair"} ${REPAIR_AMOUNT} HP, ${REPAIR_COST} ${t.coins}`}
+                title={`${t.repair} · ${t.repairCost}`}
               >
-                <span className="hs4-fire-symbol">{canFire ? "✹" : "◇"}</span>
-                <strong>{canFire ? t.fire : language === "zh" ? "未锁定" : "NO LOCK"}</strong>
-                <small>{canFire ? t.autoAim : t.fireLocked}</small>
-                <b>{game.player.ammo}</b>
+                <span>✚</span><div><strong>{t.repair}</strong><small>{t.repairCost}</small></div>
+              </button>
+
+              <button
+                type="button"
+                className={`hs4-fire-button ${!canFire ? "is-locked" : ""} ${emergencyReady && canFire ? "is-emergency" : ""}`}
+                onPointerDown={(event) => { event.preventDefault(); shoot(); }}
+                disabled={game.status !== "playing"}
+                aria-label={canFire ? (emergencyReady ? t.emergencyLabel : t.fire) : t.fireLocked}
+                title={canFire ? (emergencyReady ? t.emergencyInfo : t.fire) : t.fireLocked}
+              >
+                <span className="hs4-fire-symbol">{emergencyReady ? "⚡" : canFire ? "✹" : "◇"}</span>
+                <strong>{emergencyReady && canFire ? t.emergencyLabel : t.fire}</strong>
               </button>
             </div>
 
-            <div className="hs4-control-help"><span>{t.controls}</span><small>{t.keyboard}</small></div>
+            <div className="hs4-control-help" title={language === "zh" ? "移动 · 开炮 · 宝箱 · 买弹 · 修复" : "Move · Fire · Chest · Ammo · Repair"}>{t.keyboard}</div>
 
             {game.status !== "playing" && (
               <div className="hs4-overlay">
                 <section className={`hs4-end-card ${game.status}`}>
                   <div className="hs4-end-icon">{game.status === "victory" ? "♔" : "⚓"}</div>
-                  <span className="hs4-modal-kicker">{game.status === "victory" ? "VOYAGE COMPLETE" : "VOYAGE FAILED"}</span>
                   <h2>{game.status === "victory" ? t.victory : t.defeat}</h2>
-                  <p>{game.status === "victory" ? t.victoryText : t.defeatText}</p>
+                  <div className="hs4-final-score">
+                    <span>{t.finalScore}</span>
+                    <strong>{competitionScore.toLocaleString()}</strong>
+                  </div>
                   <div className="hs4-end-stats">
                     <div><span>{t.coins}</span><strong>{game.player.coins.toLocaleString()}</strong></div>
-                    <div><span>{t.pirates}</span><strong>{game.sunkCount} / {PIRATE_LAYOUT.length}</strong></div>
+                    <div><span>{t.pirates}</span><strong>{game.sunkCount} / {ACTIVE_PIRATE_LAYOUT.length}</strong></div>
                     <div><span>{t.hull}</span><strong>{game.player.hp}</strong></div>
                   </div>
                   <div className="hs4-end-actions">
                     <button type="button" className="hs4-gold-button" onClick={startGame}>{t.retry}</button>
-                    <button type="button" className="hs4-dark-button" onClick={() => { resetControls(); setView("entry"); }}>{t.backIntro}</button>
+                    <button type="button" className="hs4-dark-button" onClick={returnToLobby}>{t.backIntro}</button>
                   </div>
                 </section>
               </div>
@@ -1500,11 +1530,11 @@ export default function DealOrNoDeal({ onBack }) {
 
               {!chestResult ? (
                 <>
-                  <span className="hs4-modal-kicker">{t.oneOfThree}</span>
                   <h2>{t.possibleRewards}</h2>
+                  <span className="hs4-modal-kicker">{t.oneOfThree}</span>
                   <div className="hs4-outcome-grid">
                     {selectedChest.options.map((value, index) => (
-                      <article key={`${value}-${index}`}><span>{String.fromCharCode(65 + index)}</span><strong>{value}</strong><small>◈ {t.coins}</small></article>
+                      <article key={`${value}-${index}`}><strong>◈ {value}</strong></article>
                     ))}
                   </div>
                   <div className="hs4-price-strip"><span>{t.chestCost}</span><strong>◈ {selectedChest.cost}</strong></div>
@@ -1518,11 +1548,16 @@ export default function DealOrNoDeal({ onBack }) {
               ) : (
                 <>
                   <span className="hs4-modal-kicker">{t.chestOpened}</span>
-                  <h2>{t.reward} · {chestResult.reward}</h2>
-                  <div className={`hs4-result-number ${chestResult.net >= 0 ? "positive" : "negative"}`}>
-                    {chestResult.net >= 0 ? "+" : ""}{chestResult.net}
+                  <div className="hs4-loot-result">
+                    <div className="hs4-loot-payout">
+                      <small>{t.reward}</small>
+                      <strong>◈ {chestResult.reward}</strong>
+                    </div>
+                    <div className={`hs4-result-number ${chestResult.net >= 0 ? "positive" : "negative"}`}>
+                      <small>{chestResult.net >= 0 ? t.netGain : t.netLoss}</small>
+                      <strong>{chestResult.net >= 0 ? "+" : ""}{chestResult.net}</strong>
+                    </div>
                   </div>
-                  <p>{chestResult.net >= 0 ? t.netGain : t.netLoss}</p>
                   <button type="button" className="hs4-gold-button hs4-full-button" onClick={closeChestDialog}>{t.continueSailing}</button>
                 </>
               )}
@@ -1534,17 +1569,20 @@ export default function DealOrNoDeal({ onBack }) {
           <div className="hs4-overlay" onMouseDown={() => setShowRules(false)}>
             <section className="hs4-rules-modal" onMouseDown={(event) => event.stopPropagation()}>
               <button type="button" className="hs4-close-button" onClick={() => setShowRules(false)}>×</button>
-              <span className="hs4-modal-kicker">{t.howTo}</span>
-              <h2>{t.title}</h2>
+              <h2>{t.howTo}</h2>
               <div className="hs4-rules-grid">
                 {[
-                  ["01", t.step1, t.step1Text],
-                  ["02", t.step2, t.step2Text],
-                  ["03", t.step3, t.step3Text],
-                  ["04", t.step4, t.step4Text],
-                  ["05", t.step5, t.step5Text],
-                ].map(([number, title, text]) => (
-                  <article key={number}><b>{number}</b><div><strong>{title}</strong><p>{text}</p></div></article>
+                  ["🧭", t.step1, t.step1Text],
+                  ["◆", t.step2, t.step2Text],
+                  ["✹", t.step3, t.step3Text],
+                  ["⚡", t.step4, t.step4Text],
+                  ["✚", t.step5, t.step5Text],
+                ].map(([icon, title, detail]) => (
+                  <article key={title}>
+                    <span className="hs4-rule-icon" aria-hidden="true">{icon}</span>
+                    <strong>{title}</strong>
+                    <small>{detail}</small>
+                  </article>
                 ))}
               </div>
             </section>
@@ -1554,9 +1592,8 @@ export default function DealOrNoDeal({ onBack }) {
         {showLeave && (
           <div className="hs4-overlay" onMouseDown={() => setShowLeave(false)}>
             <section className="hs4-leave-modal" onMouseDown={(event) => event.stopPropagation()}>
-              <span className="hs4-modal-kicker">{t.backIntro}</span>
+              <div className="hs4-end-icon">⚓</div>
               <h2>{t.leaveTitle}</h2>
-              <p>{t.leaveText}</p>
               <div className="hs4-modal-actions">
                 <button type="button" className="hs4-dark-button" onClick={() => setShowLeave(false)}>{t.stay}</button>
                 <button type="button" className="hs4-gold-button" onClick={() => { setShowLeave(false); resetControls(); setView("entry"); }}>{t.leave}</button>

@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
+    "test:scoring": "node scripts/verify-scoring.mjs",
+    "test:integration": "node scripts/verify-integration.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

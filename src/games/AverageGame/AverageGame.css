@@ -1,7 +1,6 @@
 * {
   box-sizing: border-box;
 }
-
 html,
 body,
 #root {
@@ -10,7 +9,6 @@ body,
   height: 100%;
   overflow: hidden;
 }
-
 .average-game {
   --gold: #f5d58a;
   --gold-strong: #ffd96a;
@@ -27,85 +25,59 @@ body,
   --muted-2: rgba(238, 244, 255, 0.42);
   --danger: #ff7b78;
   --success: #7ff2b2;
-
   width: 100vw;
   height: 100vh;
-
   display: grid;
   place-items: center;
-
   overflow: hidden;
-
   background: #020713;
   color: var(--white);
-
   font-family:
     Inter,
     "Segoe UI",
     "PingFang SC",
     "Microsoft YaHei",
     sans-serif;
-
   -webkit-font-smoothing: antialiased;
 }
-
 .average-game button,
 .average-game input {
   font: inherit;
 }
-
 .average-game button {
   -webkit-tap-highlight-color: transparent;
 }
-
 /* =========================================================
    FIXED 16:9 WORLD
    ========================================================= */
-
 .avg-scene {
   position: relative;
-
   width: min(100vw, 177.7778vh);
   height: min(100vh, 56.25vw);
-
   aspect-ratio: 16 / 9;
-
   overflow: hidden;
-
   isolation: isolate;
-
   background: #061127;
 }
-
 /* =========================================================
    BACKGROUND
    ========================================================= */
-
 .avg-sky {
   position: absolute;
   z-index: -5;
-
   inset: -2.5%;
-
   width: 105%;
   height: 105%;
-
   object-fit: cover;
-
   user-select: none;
   pointer-events: none;
-
   animation: avgSkyDrift 16s ease-in-out infinite alternate;
 }
-
 .avg-overlay {
   position: absolute;
   z-index: -2;
-
   inset: 0;
-
   pointer-events: none;
-
   background:
     radial-gradient(
       circle at 50% 54%,
@@ -119,70 +91,52 @@ body,
       rgba(1, 5, 18, 0.60) 100%
     );
 }
-
 .avg-atmosphere {
   position: absolute;
   z-index: -1;
-
   inset: 0;
-
   pointer-events: none;
 }
-
 .avg-star {
   position: absolute;
-
   width: 5px;
   height: 5px;
-
   border-radius: 50%;
-
   background: #fff9df;
-
   box-shadow:
     0 0 8px #ffffff,
     0 0 20px rgba(137, 202, 255, 0.9);
-
   animation: avgTwinkle 2.8s ease-in-out infinite;
 }
-
 .avg-star.s1 {
   left: 36%;
   top: 15%;
 }
-
 .avg-star.s2 {
   left: 58%;
   top: 20%;
   animation-delay: -0.8s;
 }
-
 .avg-star.s3 {
   left: 47%;
   top: 31%;
   animation-delay: -1.6s;
 }
-
 .avg-star.s4 {
   left: 73%;
   top: 27%;
   animation-delay: -2.2s;
 }
-
 .avg-star.s5 {
   left: 26%;
   top: 29%;
   animation-delay: -1.2s;
 }
-
 .avg-light-trail {
   position: absolute;
-
   width: 340px;
   height: 1px;
-
   opacity: 0.24;
-
   background:
     linear-gradient(
       90deg,
@@ -191,502 +145,363 @@ body,
       rgba(255, 220, 140, 0.9),
       transparent
     );
-
   filter: blur(0.4px);
-
   transform-origin: center;
 }
-
 .trail-a {
   left: 15%;
   top: 33%;
   transform: rotate(-9deg);
 }
-
 .trail-b {
   right: 13%;
   top: 44%;
   transform: rotate(10deg);
 }
-
 /* =========================================================
    TOP BAR
    ========================================================= */
-
 .avg-topbar {
   position: absolute;
   z-index: 20;
-
   top: 2.5%;
   left: 3%;
   right: 3%;
-
   height: 64px;
-
   display: grid;
   grid-template-columns: 180px 1fr 180px;
   align-items: center;
 }
-
 .avg-home {
   justify-self: start;
-
   min-width: 112px;
   height: 42px;
-
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 9px;
-
   padding: 0 17px;
-
   border: 1px solid rgba(255, 225, 157, 0.42);
   border-radius: 999px;
-
   color: #fff4cb;
-
   background:
     linear-gradient(
       180deg,
       rgba(17, 29, 60, 0.82),
       rgba(6, 13, 35, 0.76)
     );
-
   box-shadow:
     0 10px 30px rgba(0, 0, 0, 0.26),
     inset 0 1px 0 rgba(255, 255, 255, 0.11),
     0 0 18px rgba(255, 207, 109, 0.08);
-
   backdrop-filter: blur(12px);
-
   cursor: pointer;
-
   font-size: 13px;
   font-weight: 700;
-
   transition:
     transform 0.2s ease,
     border-color 0.2s ease,
     box-shadow 0.2s ease;
 }
-
 .avg-home svg {
   width: 17px;
   height: 17px;
-
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-
 .avg-home:hover:not(:disabled) {
   transform: translateY(-2px);
-
   border-color: rgba(255, 232, 174, 0.76);
-
   box-shadow:
     0 12px 34px rgba(0, 0, 0, 0.30),
     0 0 22px rgba(255, 214, 123, 0.16);
 }
-
 .avg-home:active:not(:disabled) {
   transform: scale(0.97);
 }
-
 .avg-home:disabled {
   opacity: 0.34;
   cursor: default;
 }
-
 .avg-realm-brand {
   grid-column: 2;
   justify-self: center;
-
   display: flex;
   flex-direction: column;
   align-items: center;
-
   text-align: center;
-
   text-shadow:
     0 2px 3px rgba(0, 0, 0, 0.75),
     0 0 14px rgba(255, 216, 118, 0.25);
 }
-
 .avg-realm-brand span {
   font-family: Georgia, "Times New Roman", serif;
-
   color: #fff1bd;
-
   font-size: 25px;
   font-weight: 800;
   letter-spacing: 0.16em;
 }
-
 .avg-realm-brand small {
   margin-top: 3px;
-
   color: rgba(228, 238, 255, 0.70);
-
   font-size: 8px;
   font-weight: 700;
   letter-spacing: 0.28em;
 }
-
 .avg-lang {
   grid-column: 3;
   position: relative;
   justify-self: end;
-
   width: 132px;
   height: 40px;
-
   display: grid;
   grid-template-columns: 1fr 1fr;
-
   padding: 3px;
-
   border: 1px solid rgba(255, 225, 157, 0.27);
   border-radius: 999px;
-
   background: rgba(5, 13, 34, 0.68);
-
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     0 8px 22px rgba(0, 0, 0, 0.18);
-
   backdrop-filter: blur(12px);
 }
-
 .avg-lang-pill {
   position: absolute;
-
   top: 3px;
   left: 3px;
-
   width: calc(50% - 3px);
   height: calc(100% - 6px);
-
   border-radius: 999px;
-
   background:
     linear-gradient(
       180deg,
       rgba(244, 213, 140, 0.30),
       rgba(133, 89, 27, 0.24)
     );
-
   border: 1px solid rgba(255, 230, 171, 0.32);
-
   transition: transform 0.28s cubic-bezier(0.22, 0.8, 0.2, 1);
 }
-
 .avg-lang-pill[data-pos="1"] {
   transform: translateX(100%);
 }
-
 .avg-lang button {
   position: relative;
   z-index: 1;
-
   border: 0;
   background: transparent;
-
   color: rgba(237, 244, 255, 0.54);
-
   cursor: pointer;
-
   font-size: 11px;
   font-weight: 700;
 }
-
 .avg-lang button.active {
   color: #fff2c8;
 }
-
 /* =========================================================
    MAIN LAYOUT
    ========================================================= */
-
 .avg-content {
   position: absolute;
   z-index: 5;
-
   left: 5%;
   right: 5%;
   top: 12.5%;
   bottom: 5%;
-
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
   gap: 22px;
 }
-
 .avg-game-column {
   min-width: 0;
-
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 18px;
 }
-
 /* =========================================================
    HERO
    ========================================================= */
-
 .avg-hero {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 30px;
-
   padding: 2px 4px 0;
 }
-
 .avg-hero-copy {
   min-width: 0;
-
   text-shadow: 0 3px 12px rgba(0, 0, 0, 0.58);
 }
-
 .avg-eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-
   margin-bottom: 7px;
-
   color: #ffe09a;
-
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.18em;
 }
-
 .avg-eyebrow i {
   width: 6px;
   height: 6px;
-
   transform: rotate(45deg);
-
   background: #ffe09a;
-
   box-shadow: 0 0 10px rgba(255, 210, 103, 0.8);
 }
-
 .avg-hero h1 {
   margin: 0;
-
   font-family: Georgia, "Times New Roman", serif;
-
   color: #fff9e6;
-
   font-size: clamp(42px, 4.1vw, 66px);
   font-weight: 800;
   line-height: 0.96;
   letter-spacing: -0.025em;
-
   text-shadow:
     0 3px 4px rgba(0, 0, 0, 0.72),
     0 0 18px rgba(255, 218, 131, 0.16);
 }
-
 .avg-hero p {
   max-width: 600px;
-
   margin: 10px 0 0;
-
   color: rgba(238, 244, 255, 0.72);
-
   font-size: 12px;
   line-height: 1.55;
 }
-
 /* =========================================================
    PROGRESS
    ========================================================= */
-
 .avg-progress {
   display: flex;
   align-items: flex-start;
-
   padding-bottom: 4px;
 }
-
 .avg-progress-part {
   display: flex;
   align-items: flex-start;
 }
-
 .avg-progress-step {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-
   color: rgba(235, 243, 255, 0.38);
 }
-
 .avg-progress-dot {
   width: 31px;
   height: 31px;
-
   display: grid;
   place-items: center;
-
   border: 1px solid rgba(255, 226, 157, 0.17);
   border-radius: 50%;
-
   background: rgba(6, 14, 35, 0.55);
-
   font-size: 10px;
   font-weight: 800;
-
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 5px 15px rgba(0, 0, 0, 0.14);
 }
-
 .avg-progress-dot svg {
   width: 13px;
   height: 13px;
-
   fill: none;
   stroke: currentColor;
   stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-
 .avg-progress-step small {
   font-size: 8px;
   font-weight: 700;
 }
-
 .avg-progress-step.active {
   color: #ffe5a1;
 }
-
 .avg-progress-step.active .avg-progress-dot {
   border-color: rgba(255, 222, 138, 0.55);
-
   background:
     radial-gradient(
       circle at 50% 30%,
       rgba(255, 229, 159, 0.18),
       rgba(47, 31, 13, 0.54)
     );
-
   box-shadow:
     0 0 0 4px rgba(255, 215, 113, 0.05),
     0 0 16px rgba(255, 209, 92, 0.18);
 }
-
 .avg-progress-step.done .avg-progress-dot {
   color: #06111f;
-
   background:
     linear-gradient(
       180deg,
       #fff2b3,
       #e4b451
     );
-
   border-color: #ffe5a0;
 }
-
 .avg-progress-line {
   position: relative;
-
   width: 40px;
   height: 1px;
-
   margin: 15px 8px 0;
-
   overflow: hidden;
-
   background: rgba(255, 229, 167, 0.14);
 }
-
 .avg-progress-line::after {
   content: "";
-
   position: absolute;
   inset: 0;
-
   background:
     linear-gradient(
       90deg,
       #e6b959,
       #fff0ac
     );
-
   transform: scaleX(0);
   transform-origin: left;
-
   transition: transform 0.3s ease;
 }
-
 .avg-progress-line.active::after {
   transform: scaleX(1);
 }
-
 /* =========================================================
    GAME PANEL
    ========================================================= */
-
 .avg-stage-panel {
   position: relative;
-
   min-height: 0;
-
   overflow: hidden;
-
   border: 1px solid rgba(247, 218, 150, 0.24);
   border-radius: 26px;
-
   background:
     linear-gradient(
       145deg,
       rgba(11, 23, 51, 0.88),
       rgba(4, 11, 29, 0.78)
     );
-
   box-shadow:
     0 24px 70px rgba(0, 0, 0, 0.34),
     inset 0 1px 0 rgba(255, 255, 255, 0.09),
     0 0 34px rgba(83, 143, 255, 0.05);
-
   backdrop-filter: blur(18px) saturate(115%);
 }
-
 .avg-stage-panel::before {
   content: "";
-
   position: absolute;
-
   inset: 8px;
-
   pointer-events: none;
-
   border: 1px solid rgba(255, 232, 180, 0.055);
   border-radius: 20px;
 }
-
 .avg-panel-shine {
   position: absolute;
-
   top: -70px;
   left: 12%;
-
   width: 360px;
   height: 140px;
-
   pointer-events: none;
-
   background:
     radial-gradient(
       ellipse,
@@ -694,400 +509,290 @@ body,
       transparent 68%
     );
 }
-
 .avg-stage {
   position: relative;
   z-index: 2;
-
   height: 100%;
   min-height: 0;
-
   display: flex;
   flex-direction: column;
-
   padding: 28px 32px;
-
   overflow-y: auto;
-
   scrollbar-width: none;
 }
-
 .avg-stage::-webkit-scrollbar {
   display: none;
 }
-
 .avg-stage[data-dir="1"] {
   animation: avgStageForward 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
-
 .avg-stage[data-dir="-1"] {
   animation: avgStageBack 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
-
 .avg-stage-head {
   display: flex;
   align-items: flex-start;
   gap: 13px;
-
   margin-bottom: 24px;
 }
-
 .avg-stage-number {
   width: 34px;
   height: 34px;
   flex: 0 0 34px;
-
   display: grid;
   place-items: center;
-
   border: 1px solid rgba(255, 221, 141, 0.28);
   border-radius: 11px;
-
   color: #ffe3a0;
-
   background: rgba(255, 213, 104, 0.08);
-
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 0 14px rgba(255, 203, 87, 0.06);
-
   font-size: 9px;
   font-weight: 800;
 }
-
 .avg-stage-head h2 {
   margin: 0;
-
   color: #fff8e4;
-
   font-family: Georgia, "Times New Roman", serif;
-
   font-size: 24px;
   font-weight: 700;
   line-height: 1.12;
 }
-
 .avg-stage-head p {
   margin: 5px 0 0;
-
   color: var(--muted);
-
   font-size: 11px;
 }
-
 /* =========================================================
    FORM
    ========================================================= */
-
 .avg-form {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
 }
-
 .avg-field {
   min-width: 0;
-
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-
 .avg-field > span {
   padding-left: 3px;
-
   color: rgba(255, 239, 202, 0.69);
-
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.03em;
 }
-
 .avg-field input {
   width: 100%;
   height: 54px;
-
   padding: 0 15px;
-
   outline: none;
-
   border: 1px solid rgba(241, 220, 169, 0.13);
   border-radius: 14px;
-
   color: #ffffff;
   caret-color: #ffe08c;
-
   background:
     linear-gradient(
       180deg,
       rgba(19, 35, 68, 0.70),
       rgba(8, 19, 45, 0.74)
     );
-
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
     0 8px 20px rgba(0, 0, 0, 0.10);
-
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease,
-    background 0.2s ease;
+    *background* 0.2s ease;
 }
-
 .avg-field input::placeholder {
   color: rgba(232, 240, 255, 0.28);
 }
-
 .avg-field input:hover {
   border-color: rgba(248, 222, 155, 0.24);
 }
-
 .avg-field input:focus {
   border-color: rgba(255, 221, 135, 0.62);
-
   background:
     linear-gradient(
       180deg,
       rgba(24, 44, 82, 0.84),
       rgba(9, 22, 50, 0.84)
     );
-
   box-shadow:
     0 0 0 4px rgba(255, 211, 103, 0.07),
     0 0 22px rgba(87, 171, 255, 0.06);
 }
-
 .avg-field.invalid input {
   border-color: rgba(255, 123, 120, 0.64);
-
   box-shadow:
     0 0 0 4px rgba(255, 123, 120, 0.06);
 }
-
 .avg-field small {
   padding-left: 3px;
-
   color: var(--danger);
-
   font-size: 9px;
 }
-
 .avg-stage-footer {
   margin-top: auto;
   padding-top: 24px;
-
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
 }
-
 .avg-status {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-
   color: var(--muted-2);
-
   font-size: 10px;
   font-weight: 600;
 }
-
 .avg-status i {
   width: 6px;
   height: 6px;
-
   border-radius: 50%;
-
   background: rgba(238, 244, 255, 0.26);
 }
-
 .avg-status.ready {
   color: var(--success);
 }
-
 .avg-status.ready i {
   background: var(--success);
-
   box-shadow: 0 0 10px rgba(127, 242, 178, 0.48);
 }
-
 /* =========================================================
    BUTTONS
    ========================================================= */
-
 .avg-primary,
 .avg-secondary {
   min-height: 46px;
-
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 9px;
-
   padding: 0 19px;
-
   border-radius: 13px;
-
   cursor: pointer;
-
   font-size: 11px;
   font-weight: 750;
-
   transition:
     transform 0.18s ease,
     box-shadow 0.18s ease,
     border-color 0.18s ease,
     opacity 0.18s ease;
 }
-
 .avg-primary {
   min-width: 142px;
-
   border: 1px solid rgba(255, 240, 190, 0.68);
-
   color: #2f1d03;
-
   background:
     linear-gradient(
       180deg,
       #fff0b1,
       #e7b64e
     );
-
   box-shadow:
     0 8px 24px rgba(238, 183, 66, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.75);
 }
-
 .avg-primary svg {
   width: 13px;
   height: 13px;
-
   fill: currentColor;
   stroke: currentColor;
 }
-
 .avg-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-
   box-shadow:
     0 12px 30px rgba(238, 183, 66, 0.24),
     0 0 18px rgba(255, 218, 126, 0.18);
 }
-
 .avg-primary:active:not(:disabled) {
   transform: scale(0.98);
 }
-
 .avg-primary:disabled {
   opacity: 0.30;
   cursor: not-allowed;
-
   filter: saturate(0.4);
 }
-
 .avg-secondary {
   border: 1px solid rgba(239, 219, 171, 0.20);
-
   color: rgba(247, 241, 226, 0.82);
-
   background: rgba(11, 25, 54, 0.64);
 }
-
 .avg-secondary svg {
   width: 14px;
   height: 14px;
-
   fill: none;
   stroke: currentColor;
   stroke-width: 2.2;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-
 .avg-secondary:hover {
   transform: translateY(-1px);
-
   border-color: rgba(255, 226, 160, 0.40);
 }
-
 /* =========================================================
    NUMBER PICKER
    ========================================================= */
-
 .avg-number-zone {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 24px;
-
   margin: 2px 0 20px;
 }
-
 .avg-number-button {
   width: 48px;
   height: 48px;
   flex: 0 0 48px;
-
   display: grid;
   place-items: center;
-
   border: 1px solid rgba(255, 224, 151, 0.22);
   border-radius: 50%;
-
   color: #fff1c3;
-
   background:
     linear-gradient(
       180deg,
       rgba(23, 43, 80, 0.84),
       rgba(7, 18, 45, 0.84)
     );
-
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     0 9px 22px rgba(0, 0, 0, 0.18);
-
   cursor: pointer;
-
   font-size: 24px;
   font-weight: 300;
-
   transition:
     transform 0.17s ease,
     border-color 0.17s ease;
 }
-
 .avg-number-button:hover:not(:disabled) {
   transform: translateY(-2px);
-
   border-color: rgba(255, 228, 167, 0.48);
 }
-
 .avg-number-button:active:not(:disabled) {
   transform: scale(0.94);
 }
-
 .avg-number-button:disabled {
   opacity: 0.28;
   cursor: not-allowed;
 }
-
 .avg-crystal-number {
   position: relative;
-
   width: 170px;
   height: 132px;
-
   display: grid;
   place-items: center;
-
   overflow: hidden;
-
   border: 1px solid rgba(255, 222, 139, 0.30);
   border-radius: 24px;
-
   background:
     radial-gradient(
       circle at 50% 35%,
@@ -1099,91 +804,62 @@ body,
       rgba(17, 36, 73, 0.92),
       rgba(6, 15, 40, 0.92)
     );
-
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.09),
     0 16px 38px rgba(0, 0, 0, 0.20),
     0 0 28px rgba(84, 164, 255, 0.08);
 }
-
 .avg-crystal-ring {
   position: absolute;
-
   border: 1px solid rgba(116, 211, 255, 0.18);
   border-radius: 50%;
-
   pointer-events: none;
 }
-
 .avg-crystal-ring.ring-1 {
   width: 108px;
   height: 108px;
-
   transform: rotate(22deg);
-
   animation: avgRingSpin 12s linear infinite;
 }
-
 .avg-crystal-ring.ring-2 {
   width: 138px;
   height: 68px;
-
   transform: rotate(-18deg);
-
   animation: avgRingSpinReverse 10s linear infinite;
 }
-
 .avg-crystal-number strong {
   position: relative;
   z-index: 2;
-
   margin-top: -8px;
-
   color: #fff6d9;
-
   font-family: Georgia, "Times New Roman", serif;
-
   font-size: 58px;
   line-height: 1;
-
   text-shadow:
     0 0 12px rgba(112, 211, 255, 0.28),
     0 0 24px rgba(255, 220, 128, 0.12);
-
   animation: avgNumberPop 0.20s ease both;
 }
-
 .avg-crystal-number small {
   position: absolute;
-
   bottom: 15px;
-
   color: rgba(233, 242, 255, 0.44);
-
   font-size: 8px;
   font-weight: 700;
   letter-spacing: 0.12em;
 }
-
 .avg-slider-wrap {
   width: min(100%, 480px);
-
   margin: 0 auto;
 }
-
 .avg-slider-wrap input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
-
   width: 100%;
   height: 5px;
-
   border-radius: 999px;
-
   outline: none;
-
   cursor: pointer;
-
   background:
     linear-gradient(
       90deg,
@@ -1193,283 +869,229 @@ body,
       rgba(255, 255, 255, 0.12) 100%
     );
 }
-
 .avg-slider-wrap input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-
   width: 22px;
   height: 22px;
-
   border: 2px solid #ffe5a0;
   border-radius: 50%;
-
   background: #ffffff;
-
   box-shadow:
     0 0 0 4px rgba(255, 218, 126, 0.08),
     0 3px 10px rgba(0, 0, 0, 0.30);
 }
-
 .avg-slider-wrap input[type="range"]::-moz-range-thumb {
   width: 22px;
   height: 22px;
-
   border: 2px solid #ffe5a0;
   border-radius: 50%;
-
   background: #ffffff;
 }
-
 .avg-slider-scale {
   display: flex;
   justify-content: space-between;
-
   margin-top: 7px;
-
   color: rgba(236, 243, 255, 0.42);
-
   font-size: 8px;
 }
-
 .avg-key-hint {
   display: block;
-
   margin-top: 6px;
-
   color: rgba(236, 243, 255, 0.31);
-
   text-align: center;
   font-size: 8px;
 }
-
 .avg-tip {
   width: min(100%, 480px);
-
   margin: 14px auto 0;
   padding: 10px 12px;
-
   display: flex;
   align-items: center;
   gap: 9px;
-
   border: 1px solid rgba(116, 211, 255, 0.12);
   border-radius: 12px;
-
   color: rgba(222, 239, 255, 0.72);
-
   background: rgba(46, 119, 185, 0.10);
-
   font-size: 9px;
   line-height: 1.4;
 }
-
 .avg-tip svg {
   width: 13px;
   height: 13px;
   flex: 0 0 13px;
-
   fill: #8de3ff;
 }
-
 .avg-actions {
   margin-top: auto;
   padding-top: 18px;
-
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
 }
-
 /* =========================================================
    DONE
    ========================================================= */
-
 .avg-done-stage {
   align-items: center;
   justify-content: center;
-
   text-align: center;
 }
-
 .avg-complete-icon {
   width: 54px;
   height: 54px;
-
   display: grid;
   place-items: center;
-
   margin-bottom: 12px;
-
   border: 1px solid rgba(126, 241, 176, 0.38);
   border-radius: 18px;
-
   color: #8cf4b8;
-
   background: rgba(89, 218, 146, 0.09);
-
   box-shadow: 0 0 24px rgba(84, 226, 148, 0.10);
 }
-
 .avg-complete-icon svg {
   width: 21px;
   height: 21px;
-
   fill: none;
   stroke: currentColor;
   stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-
 .avg-complete-tag {
   color: #8cf4b8;
-
   font-size: 8px;
   font-weight: 800;
   letter-spacing: 0.18em;
 }
-
 .avg-done-stage > h2 {
   margin: 8px 0 0;
-
   color: #fff8e6;
-
   font-family: Georgia, "Times New Roman", serif;
-
   font-size: 31px;
 }
-
 .avg-done-stage > p {
   margin: 7px 0 0;
-
   color: var(--muted);
-
   font-size: 11px;
 }
-
 .avg-receipt {
   width: min(100%, 430px);
-
   margin-top: 22px;
   padding: 14px 17px;
-
   display: grid;
   grid-template-columns: 1fr 1px 1.4fr;
   align-items: center;
   gap: 18px;
-
   border: 1px solid rgba(255, 223, 145, 0.20);
   border-radius: 16px;
-
   background: rgba(11, 25, 54, 0.60);
-
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
-
+.average-game .avg-form {
+  display: none;
+}
+.average-game .avg-receipt {
+  grid-template-columns: 1fr;
+}
+.average-game .avg-receipt-divider,
+.average-game .avg-player-summary {
+  display: none;
+}
 .avg-receipt > div:first-child {
   display: flex;
   flex-direction: column;
   align-items: center;
 }
-
 .avg-receipt small {
   color: var(--muted-2);
-
   font-size: 8px;
   letter-spacing: 0.12em;
 }
-
 .avg-receipt > div:first-child strong {
   margin-top: 3px;
-
   color: #fff0b5;
-
   font-family: Georgia, "Times New Roman", serif;
-
   font-size: 34px;
 }
-
 .avg-receipt-divider {
   width: 1px;
   height: 48px;
-
   background: rgba(255, 230, 169, 0.14);
 }
-
 .avg-player-summary {
   min-width: 0;
-
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 5px;
-
   text-align: left;
 }
-
 .avg-player-summary strong {
   max-width: 100%;
-
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-
   color: #ffffff;
-
   font-size: 12px;
 }
-
 .avg-result-note {
   color: rgba(240, 245, 255, 0.46) !important;
-
   font-size: 9px !important;
 }
-
+.avg-score-pending {
+  margin-top: 10px;
+  padding: 7px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(255, 216, 126, 0.22);
+  border-radius: 999px;
+  color: #f4d584;
+  background: rgba(255, 205, 91, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.avg-score-pending i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f4c861;
+  box-shadow: 0 0 10px rgba(244, 200, 97, 0.7);
+}
+.avg-score-pending strong {
+  font-size: 8px;
+  letter-spacing: 0.16em;
+}
 /* =========================================================
    GUIDE
    ========================================================= */
-
 .avg-guide {
   position: relative;
-
   min-height: 0;
-
   display: flex;
   flex-direction: column;
-
   overflow: hidden;
-
   border: 1px solid rgba(247, 218, 150, 0.24);
   border-radius: 26px;
-
   background:
     linear-gradient(
       160deg,
       rgba(11, 23, 51, 0.84),
       rgba(4, 11, 29, 0.76)
     );
-
   box-shadow:
     0 24px 70px rgba(0, 0, 0, 0.30),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
-
   backdrop-filter: blur(18px) saturate(115%);
 }
-
 .avg-guide-portal {
   position: relative;
-
   height: 195px;
   flex: 0 0 195px;
-
   display: grid;
   place-items: center;
-
   overflow: hidden;
-
   border-bottom: 1px solid rgba(255, 226, 158, 0.12);
-
   background:
     radial-gradient(
       circle at 50% 50%,
@@ -1478,434 +1100,326 @@ body,
       transparent 72%
     );
 }
-
 .avg-guide-portal img {
   position: relative;
   z-index: 2;
-
   width: 88%;
-
   user-select: none;
   pointer-events: none;
-
   filter:
     drop-shadow(0 14px 18px rgba(0, 0, 0, 0.38))
     drop-shadow(0 0 14px rgba(255, 210, 106, 0.08));
-
   animation: avgPortalFloat 4.8s ease-in-out infinite;
 }
-
 .avg-portal-halo {
   position: absolute;
-
   width: 210px;
   height: 84px;
-
   border: 1px solid rgba(255, 220, 137, 0.24);
   border-radius: 50%;
-
   transform: rotate(-7deg);
-
   box-shadow:
     0 0 18px rgba(100, 196, 255, 0.08),
     inset 0 0 18px rgba(255, 214, 113, 0.04);
-
   animation: avgHalo 8s linear infinite;
 }
-
 .avg-guide-copy {
   min-height: 0;
-
   display: flex;
   flex-direction: column;
-
   padding: 20px 20px 18px;
 }
-
 .avg-guide-kicker {
   color: #f7d681;
-
   font-size: 8px;
   font-weight: 800;
   letter-spacing: 0.17em;
 }
-
 .avg-guide h2 {
   margin: 5px 0 14px;
-
   color: #fff7df;
-
   font-family: Georgia, "Times New Roman", serif;
-
   font-size: 21px;
 }
-
 .avg-guide-steps {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-
 .avg-guide-step {
   min-height: 46px;
-
   display: grid;
   grid-template-columns: 28px 1fr;
   align-items: center;
   gap: 10px;
-
   padding: 8px 10px;
-
   border: 1px solid rgba(255, 228, 165, 0.09);
   border-radius: 12px;
-
   background: rgba(14, 29, 59, 0.52);
 }
-
 .avg-guide-step > span {
   width: 27px;
   height: 27px;
-
   display: grid;
   place-items: center;
-
   border-radius: 9px;
-
   color: #ffe2a0;
-
   background: rgba(255, 215, 112, 0.08);
-
   font-size: 9px;
   font-weight: 800;
 }
-
 .avg-guide-step p {
   margin: 0;
-
   color: rgba(237, 244, 255, 0.68);
-
   font-size: 9px;
   line-height: 1.4;
 }
-
 .avg-target {
   margin-top: 12px;
   padding: 12px 14px;
-
   border: 1px solid rgba(255, 226, 159, 0.13);
   border-radius: 13px;
-
   background: rgba(5, 16, 39, 0.52);
 }
-
 .avg-target > small {
   color: rgba(236, 243, 255, 0.40);
-
   font-size: 7px;
   font-weight: 800;
   letter-spacing: 0.16em;
 }
-
 .avg-target > div {
   display: flex;
   align-items: baseline;
   gap: 8px;
-
   margin-top: 5px;
 }
-
 .avg-target strong {
   color: #fff0b6;
-
   font-family: Georgia, "Times New Roman", serif;
-
   font-size: 26px;
 }
-
 .avg-target span {
   color: rgba(236, 243, 255, 0.40);
-
   font-size: 9px;
 }
-
 .avg-target b {
   color: rgba(245, 239, 222, 0.82);
-
   font-size: 9px;
   letter-spacing: 0.10em;
 }
-
 .avg-guide-note {
   margin: 12px 2px 0;
-
   color: rgba(235, 243, 255, 0.42);
-
   font-size: 8.5px;
   line-height: 1.5;
 }
-
 /* =========================================================
    ANIMATIONS
    ========================================================= */
-
 @keyframes avgSkyDrift {
   from {
     transform: scale(1.015) translate(-0.35%, -0.2%);
   }
-
   to {
     transform: scale(1.045) translate(0.35%, 0.2%);
   }
 }
-
 @keyframes avgTwinkle {
   0%,
   100% {
     opacity: 0.25;
     transform: scale(0.7);
   }
-
   50% {
     opacity: 1;
     transform: scale(1.25);
   }
 }
-
 @keyframes avgStageForward {
   from {
     opacity: 0;
     transform: translateX(13px);
   }
-
   to {
     opacity: 1;
     transform: translateX(0);
   }
 }
-
 @keyframes avgStageBack {
   from {
     opacity: 0;
     transform: translateX(-13px);
   }
-
   to {
     opacity: 1;
     transform: translateX(0);
   }
 }
-
 @keyframes avgNumberPop {
   from {
     opacity: 0.55;
     transform: scale(0.92);
   }
-
   to {
     opacity: 1;
     transform: scale(1);
   }
 }
-
 @keyframes avgRingSpin {
   from {
     transform: rotate(22deg);
   }
-
   to {
     transform: rotate(382deg);
   }
 }
-
 @keyframes avgRingSpinReverse {
   from {
     transform: rotate(-18deg);
   }
-
   to {
     transform: rotate(-378deg);
   }
 }
-
 @keyframes avgPortalFloat {
   0%,
   100% {
     transform: translateY(0);
   }
-
   50% {
     transform: translateY(-8px);
   }
 }
-
 @keyframes avgHalo {
   from {
     transform: rotate(-7deg);
   }
-
   to {
     transform: rotate(353deg);
   }
 }
-
 /* =========================================================
    RESPONSIVE / SHORT SCREENS
    ========================================================= */
-
 @media (max-width: 1050px) {
   .avg-content {
     grid-template-columns: minmax(0, 1fr) 280px;
     gap: 15px;
-
     left: 3.5%;
     right: 3.5%;
   }
-
   .avg-guide-portal {
     height: 170px;
     flex-basis: 170px;
   }
-
   .avg-guide-copy {
     padding: 16px;
   }
 }
-
 @media (max-width: 860px) {
   .avg-content {
     grid-template-columns: 1fr;
   }
-
   .avg-guide {
     display: none;
   }
-
   .avg-topbar {
     grid-template-columns: 150px 1fr 150px;
   }
-
   .avg-hero h1 {
     font-size: clamp(38px, 7vw, 58px);
   }
 }
-
 @media (max-width: 650px) {
   .avg-topbar {
     left: 4%;
     right: 4%;
-
     grid-template-columns: 110px 1fr 112px;
   }
-
   .avg-realm-brand span {
     font-size: 18px;
   }
-
   .avg-realm-brand small {
     display: none;
   }
-
   .avg-home {
     min-width: 88px;
     height: 38px;
-
     padding: 0 12px;
   }
-
   .avg-lang {
     width: 108px;
     height: 38px;
   }
-
   .avg-content {
     top: 11%;
     bottom: 3.5%;
-
     left: 4%;
     right: 4%;
   }
-
   .avg-hero {
     align-items: flex-start;
     flex-direction: column;
     gap: 12px;
   }
-
   .avg-progress {
     align-self: flex-end;
   }
-
   .avg-form {
     grid-template-columns: 1fr;
   }
-
   .avg-stage {
     padding: 22px 18px;
   }
-
   .avg-stage-footer {
     align-items: stretch;
     flex-direction: column;
   }
-
   .avg-primary {
     width: 100%;
   }
-
   .avg-number-zone {
     gap: 12px;
   }
-
   .avg-crystal-number {
     width: 145px;
     height: 118px;
   }
-
   .avg-actions {
     width: 100%;
   }
-
   .avg-actions > * {
     flex: 1;
   }
 }
-
 @media (max-height: 720px) and (min-width: 861px) {
   .avg-content {
     top: 11.5%;
     bottom: 3%;
   }
-
   .avg-hero h1 {
     font-size: 46px;
   }
-
   .avg-hero p {
     margin-top: 6px;
   }
-
   .avg-stage {
     padding-block: 20px;
   }
-
   .avg-stage-head {
     margin-bottom: 16px;
   }
-
   .avg-guide-portal {
     height: 155px;
     flex-basis: 155px;
   }
-
   .avg-guide-copy {
     padding-top: 15px;
   }
-
   .avg-guide-step {
     min-height: 40px;
   }
 }
-
 @media (prefers-reduced-motion: reduce) {
   .average-game *,
   .average-game *::before,
@@ -1914,4 +1428,270 @@ body,
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* =========================================================
+   VISUAL-FIRST / COMPACT LAYOUT
+   Purely presentational: gameplay, score events, and API
+   submissions remain in AverageGame.jsx unchanged.
+   ========================================================= */
+.average-game {
+  --line: rgba(245, 214, 148, 0.18);
+  --muted: rgba(235, 244, 255, 0.68);
+}
+.avg-topbar {
+  top: 2.2%;
+  height: 54px;
+}
+.avg-realm-brand span {
+  font-size: clamp(18px, 1.7vw, 23px);
+}
+.avg-realm-brand small {
+  font-size: 8px;
+  letter-spacing: 0.23em;
+}
+.avg-content {
+  top: 12.5%;
+  bottom: 5%;
+  left: 4.5%;
+  right: 4.5%;
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 270px);
+  gap: 16px;
+}
+.avg-game-column { gap: 15px; }
+.avg-hero {
+  align-items: center;
+  gap: 14px;
+  padding: 0 6px;
+}
+.avg-hero h1 {
+  font-size: clamp(34px, 3.6vw, 52px);
+  line-height: 1.06;
+}
+.avg-hero p {
+  margin-top: 5px;
+  font-size: clamp(10px, 0.85vw, 12px);
+  line-height: 1.35;
+}
+.avg-progress { align-items: center; padding-bottom: 0; }
+.avg-progress-step { gap: 5px; }
+.avg-progress-dot {
+  width: 28px;
+  height: 28px;
+  font-size: 10px;
+}
+.avg-progress-line { width: 25px; margin: 14px 5px 0; }
+.avg-progress-step small { font-size: 9px; }
+.avg-stage-panel,
+.avg-guide {
+  border-color: rgba(255, 219, 149, 0.17);
+  border-radius: 22px;
+  background: linear-gradient(153deg, rgba(12, 24, 48, 0.89), rgba(5, 13, 31, 0.88));
+  box-shadow: 0 20px 52px rgba(0, 0, 0, 0.27), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.avg-stage { padding: clamp(18px, 2.2vw, 30px); }
+.avg-stage-head { gap: 10px; margin-bottom: 18px; }
+.avg-stage-head h2 { font-size: clamp(21px, 2vw, 27px); }
+.avg-stage-head p { margin-top: 6px; font-size: 11px; line-height: 1.4; }
+.avg-stage-number {
+  width: 29px;
+  height: 29px;
+  flex-basis: 29px;
+  border-radius: 9px;
+}
+
+/* Intro: one rule, one visual, one action */
+.avg-ready-stage {
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: center;
+}
+.avg-ready-stage .avg-stage-head {
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+}
+.avg-ready-stage .avg-stage-number { display: none; }
+.avg-ready-stage .avg-stage-head h2 {
+  font-size: clamp(26px, 2.75vw, 38px);
+}
+.avg-ready-stage .avg-stage-head p {
+  max-width: 390px;
+  font-size: clamp(11px, 0.9vw, 13px);
+}
+.avg-intro-symbol {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  isolation: isolate;
+  min-height: 145px;
+  gap: 2px;
+}
+.avg-intro-glow {
+  position: absolute;
+  z-index: -1;
+  width: 195px;
+  height: 135px;
+  border: 1px solid rgba(255, 214, 131, 0.24);
+  border-radius: 50%;
+  transform: rotate(-16deg);
+  box-shadow: 0 0 45px rgba(255, 206, 113, 0.08), inset 0 0 35px rgba(102, 200, 255, 0.06);
+}
+.avg-intro-symbol strong {
+  color: #ffebb0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(75px, 8vw, 115px);
+  font-weight: 700;
+  line-height: 0.9;
+  text-shadow: 0 0 28px rgba(255, 217, 134, 0.21);
+}
+.avg-intro-symbol > span:last-child {
+  color: rgba(255, 234, 178, 0.76);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+}
+.avg-ready-stage .avg-stage-footer {
+  width: 100%;
+  justify-content: center;
+  margin-top: 0;
+  padding-top: 0;
+}
+.avg-ready-stage .avg-status { display: none; }
+.avg-ready-stage .avg-primary {
+  min-width: 190px;
+  min-height: 50px;
+  font-size: 12px;
+}
+
+/* Number selection: make the actual interactive control dominant */
+.avg-number-stage { justify-content: space-between; }
+.avg-number-stage .avg-stage-head { margin-bottom: 8px; }
+.avg-number-zone { gap: 17px; margin: 0 0 14px; }
+.avg-crystal-number {
+  width: clamp(140px, 15vw, 184px);
+  height: clamp(112px, 13vh, 150px);
+  border-radius: 22px;
+}
+.avg-crystal-number strong { font-size: clamp(58px, 5.6vw, 76px); }
+.avg-crystal-number small { bottom: 12px; font-size: 10px; }
+.avg-number-button { width: 50px; height: 50px; flex-basis: 50px; }
+.avg-slider-wrap { width: min(100%, 440px); }
+.avg-slider-scale { margin-top: 11px; font-size: 10px; }
+.avg-key-hint { margin-top: 6px; font-size: 9px; }
+.avg-tip {
+  width: min(100%, 440px);
+  justify-content: center;
+  margin-top: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 10px;
+}
+.avg-actions { padding-top: 12px; }
+.avg-primary, .avg-secondary { min-height: 48px; font-size: 11px; }
+
+/* Final: avoid duplicated descriptions; retain the pending state */
+.avg-done-stage { gap: 10px; }
+.avg-complete-icon { margin-bottom: 2px; }
+.avg-complete-tag { display: none; }
+.avg-done-stage > h2 { margin: 0; font-size: clamp(27px, 2.8vw, 36px); }
+.avg-receipt { margin-top: 4px; width: min(100%, 310px); padding: 18px; }
+.avg-receipt > div:first-child strong { font-size: clamp(47px, 4.5vw, 65px); }
+.avg-score-pending { margin-top: 0; padding: 9px 15px; }
+.avg-score-pending strong { font-size: 10px; }
+.avg-done-stage .avg-actions { margin: 8px 0 0; padding: 0; }
+
+/* Guide: portal artwork + two readable rules + formula */
+.avg-guide-portal {
+  height: clamp(135px, 23vh, 196px);
+  flex-basis: clamp(135px, 23vh, 196px);
+}
+.avg-guide-portal img { width: 84%; max-height: 93%; object-fit: contain; }
+.avg-guide-copy { padding: 18px; }
+.avg-guide-kicker { font-size: 9px; }
+.avg-guide h2 { margin: 6px 0 14px; font-size: 23px; }
+.avg-guide-steps { gap: 9px; }
+.avg-guide-step {
+  min-height: 44px;
+  grid-template-columns: 28px 1fr;
+  padding: 8px 10px;
+  border-radius: 12px;
+}
+.avg-guide-step p { font-size: 11px; line-height: 1.35; }
+.avg-target { margin-top: 15px; padding: 13px 15px; }
+.avg-target strong { font-size: 30px; }
+.avg-target b { font-size: 10px; }
+
+/* Adaptive, never hide the active number or its submit button */
+@media (max-width: 1050px) and (min-width: 761px) {
+  .avg-content {
+    left: 3.5%; right: 3.5%; gap: 12px;
+    grid-template-columns: minmax(0, 1fr) 230px;
+  }
+  .avg-hero h1 { font-size: clamp(30px, 3.5vw, 41px); }
+  .avg-progress-line { width: 16px; margin-inline: 3px; }
+  .avg-stage { padding: 18px 20px; }
+  .avg-guide-copy { padding: 14px; }
+  .avg-guide h2 { margin-bottom: 10px; font-size: 20px; }
+  .avg-guide-step p { font-size: 10px; }
+}
+@media (max-width: 760px) {
+  .average-game { height: 100dvh; width: 100%; }
+  .avg-scene { width: 100%; height: 100dvh; aspect-ratio: auto; }
+  .avg-topbar {
+    top: 9px;
+    left: 5%; right: 5%;
+    height: 44px;
+    grid-template-columns: 1fr auto;
+  }
+  .avg-realm-brand { grid-column: 1; justify-self: start; align-items: flex-start; }
+  .avg-realm-brand span { font-size: 19px; }
+  .avg-realm-brand small { display: none; }
+  .avg-lang { grid-column: 2; width: 112px; height: 36px; }
+  .avg-content {
+    top: 69px; bottom: 16px; left: 4%; right: 4%;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .avg-game-column { grid-template-rows: auto minmax(0, 1fr); gap: 14px; }
+  .avg-guide { display: none; }
+  .avg-hero { align-items: center; flex-direction: row; gap: 12px; }
+  .avg-hero h1 { font-size: clamp(27px, 6.5vw, 39px); }
+  .avg-hero p { display: none; }
+  .avg-progress { align-self: auto; margin-left: auto; }
+  .avg-progress-dot { width: 24px; height: 24px; }
+  .avg-progress-line { width: 12px; margin: 12px 3px 0; }
+  .avg-progress-step small { display: none; }
+  .avg-stage { padding: clamp(16px, 4vw, 26px); }
+  .avg-ready-stage { justify-content: space-evenly; gap: 18px; }
+  .avg-ready-stage .avg-stage-head h2 { font-size: clamp(25px, 6vw, 33px); }
+  .avg-ready-stage .avg-stage-head p { max-width: 310px; font-size: 12px; }
+  .avg-intro-symbol { min-height: 130px; }
+  .avg-intro-symbol strong { font-size: clamp(76px, 20vw, 105px); }
+  .avg-ready-stage .avg-primary { min-width: 160px; }
+  .avg-number-zone { gap: 10px; margin: 8px 0 14px; }
+  .avg-crystal-number { width: clamp(132px, 42vw, 168px); height: 124px; }
+  .avg-crystal-number strong { font-size: 62px; }
+  .avg-number-button { width: 45px; height: 45px; flex-basis: 45px; }
+  .avg-number-stage .avg-stage-head { margin-bottom: 8px; }
+  .avg-stage-head h2 { font-size: 24px; }
+  .avg-tip { margin-top: 12px; }
+  .avg-actions { width: 100%; }
+  .avg-actions > * { flex: 1; }
+  .avg-done-stage { justify-content: center; }
+}
+@media (max-width: 760px) and (max-height: 610px) {
+  .avg-content { top: 58px; bottom: 8px; }
+  .avg-game-column { gap: 8px; }
+  .avg-intro-symbol { min-height: 96px; }
+  .avg-intro-symbol strong { font-size: 64px; }
+  .avg-number-zone { margin: 4px 0; }
+  .avg-crystal-number { height: 95px; }
+  .avg-crystal-number strong { font-size: 50px; }
+  .avg-tip { padding: 6px 9px; margin-top: 5px; }
+  .avg-actions { padding-top: 6px; }
 }

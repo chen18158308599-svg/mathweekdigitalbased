@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./NumberSequence.css";
 import hubBackground from "../../assets/home-layers/background.png";
 import sequenceIsland from "../../assets/home-layers/sequence.png";
+import {
+  calculateNumberSequenceScore,
+  createCompetitionAttempt,
+} from "../../scoring/competitionScoring.js";
 
 const GAME_ID = "REPLACE_WITH_GAME_ID";
 const MAX_HEARTS = 3;
@@ -95,10 +99,6 @@ const I18N = {
     startJourney: "进入魔穴",
     homeSubtitle: "数列 · 符石 · 远征",
     homeStory: "封印松动，数序魔穴重新开启。沿着符文之路前进，在生命耗尽前击破最后的守卫。",
-    music: "音乐",
-    sfx: "音效",
-    soundOn: "开",
-    soundOff: "关",
     enteringCave: "正在进入魔穴",
     returnEntrance: "返回入口",
     exitShort: "入口",
@@ -172,10 +172,6 @@ const I18N = {
     startJourney: "Enter the Cavern",
     homeSubtitle: "SEQUENCE · RUNES · EXPEDITION",
     homeStory: "The seal has weakened and the Sequence Cavern has opened again. Follow the rune path and defeat the final warden before your life runs out.",
-    music: "Music",
-    sfx: "SFX",
-    soundOn: "On",
-    soundOff: "Off",
     enteringCave: "Entering the Cavern",
     returnEntrance: "Back to Entrance",
     exitShort: "Exit",
@@ -1361,6 +1357,10 @@ const WAVE_META = [
   }
 ];
 
+const ACTIVE_WAVE_INDICES = [0, 1, WAVES.length - 1];
+const ACTIVE_WAVE_COUNT = ACTIVE_WAVE_INDICES.length;
+const FINAL_WAVE_INDEX = ACTIVE_WAVE_INDICES[ACTIVE_WAVE_COUNT - 1];
+
 const LOOT_TEXT = {
   power: {
     zh: "下一次正确攻击造成 2 点伤害",
@@ -1398,8 +1398,8 @@ const ENEMY_RGB = {
 
 const RUNE_SIGILS = ["◆", "◈", "▲", "✦"];
 
-export default function NumberSequence({ onHome }) {
-  const [lang, setLang] = useState("zh");
+export default function NumberSequence({ onHome, onPostGameHome }) {
+  const [lang, setLang] = useState("en");
   const [waveIndex, setWaveIndex] = useState(0);
   const [puzzleIndex, setPuzzleIndex] = useState(0);
 
@@ -1445,11 +1445,20 @@ export default function NumberSequence({ onHome }) {
   const [canvasScale, setCanvasScale] = useState({ x: 1, y: 1 });
   const [mainGone, setMainGone] = useState(false);
   const [gameMode, setGameMode] = useState("home");
-  const [musicOn, setMusicOn] = useState(true);
-  const [sfxOn, setSfxOn] = useState(true);
+  const musicOn = true;
+  const sfxOn = true;
   const [confirmHome, setConfirmHome] = useState(false);
   const [powerItemUid, setPowerItemUid] = useState(null);
   const [guardItemUid, setGuardItemUid] = useState(null);
+  const [competitionStats, setCompetitionStats] = useState({
+    uniqueCorrect: 0,
+    firstTryCorrect: 0,
+    completedEncounters: 0,
+  });
+  const [competitionResult, setCompetitionResult] = useState(null);
+  const [initialCompetitionAttempt] = useState(() =>
+    createCompetitionAttempt("number-sequence")
+  );
 
   const shellRef = useRef(null);
   const canvasRef = useRef(null);
@@ -1477,17 +1486,35 @@ export default function NumberSequence({ onHome }) {
 
   const resultSoundRef = useRef(null);
   const resultScoreNodesRef = useRef([]);
+  const competitionAttemptRef = useRef(initialCompetitionAttempt);
+  const competitionStatsRef = useRef({
+    uniqueCorrect: 0,
+    firstTryCorrect: 0,
+    completedEncounters: 0,
+  });
+  const attemptedQuestionIdsRef = useRef(new Set());
+  const rewardedQuestionIdsRef = useRef(new Set());
+  const completedEncounterIdsRef = useRef(new Set());
 
   const t = I18N[lang];
   const wave = WAVES[waveIndex];
   const enemy = wave.enemy;
   const puzzle = wave.puzzles[puzzleIndex % wave.puzzles.length];
-  const isFinalWave = waveIndex === WAVES.length - 1;
+  const routeIndex = ACTIVE_WAVE_INDICES.indexOf(waveIndex);
+  const isFinalWave = waveIndex === FINAL_WAVE_INDEX;
   const waveMeta = WAVE_META[waveIndex];
   const aliveMinions = minions.filter((unit) => unit.hp > 0);
   const bossShielded = isFinalWave && aliveMinions.length > 0;
   const showMainEnemy = enemyHp > 0 || enemyDying;
   const showMainHud = enemyHp > 0;
+  const questionDefinitionIndex = wave.puzzles.indexOf(puzzle);
+  const currentQuestionId = `wave-${waveIndex}-question-${questionDefinitionIndex}`;
+  const liveCompetitionScore = calculateNumberSequenceScore({
+    ...competitionStats,
+    victory: false,
+  });
+  const displayedCompetitionScore =
+    competitionResult?.finalScore ?? liveCompetitionScore;
 
   const enemyHpPercent = useMemo(
     () => Math.max(0, Math.min(100, (enemyHp / enemy.hp) * 100)),
@@ -1538,21 +1565,13 @@ export default function NumberSequence({ onHome }) {
     // Use ONE uniform scale for both axes so circles, text and artwork
     // are never stretched.
     //
-    // Home / entry: "cover" the viewport to keep the large cinematic
-    // full-screen look. Any excess is cropped, never distorted.
-    //
-    // Battle: "contain" the full 1440×960 game surface so no controls
-    // are cut off.
+    // Keep the complete 1440×960 composition visible at every viewport size.
     const updateCanvasScale = () => {
       const { width, height } = shell.getBoundingClientRect();
 
       const scaleX = width / DESIGN_WIDTH;
       const scaleY = height / DESIGN_HEIGHT;
-
-      const rawScale =
-        gameMode === "game"
-          ? Math.min(scaleX, scaleY)
-          : Math.max(scaleX, scaleY);
+      const rawScale = Math.min(scaleX, scaleY);
 
       const scale =
         Number.isFinite(rawScale) && rawScale > 0 ? rawScale : 1;
@@ -2319,6 +2338,70 @@ export default function NumberSequence({ onHome }) {
     );
   }, []);
 
+  function resetCompetitionScoring() {
+    const initialStats = {
+      uniqueCorrect: 0,
+      firstTryCorrect: 0,
+      completedEncounters: 0,
+    };
+
+    competitionAttemptRef.current = createCompetitionAttempt("number-sequence");
+    competitionStatsRef.current = initialStats;
+    attemptedQuestionIdsRef.current = new Set();
+    rewardedQuestionIdsRef.current = new Set();
+    completedEncounterIdsRef.current = new Set();
+    setCompetitionStats(initialStats);
+    setCompetitionResult(null);
+  }
+
+  function recordCompetitionAnswer(isCorrect) {
+    const isFirstAttempt = !attemptedQuestionIdsRef.current.has(currentQuestionId);
+    attemptedQuestionIdsRef.current.add(currentQuestionId);
+
+    if (!isCorrect || rewardedQuestionIdsRef.current.has(currentQuestionId)) return;
+
+    rewardedQuestionIdsRef.current.add(currentQuestionId);
+    const current = competitionStatsRef.current;
+    const next = {
+      ...current,
+      uniqueCorrect: current.uniqueCorrect + 1,
+      firstTryCorrect: current.firstTryCorrect + (isFirstAttempt ? 1 : 0),
+    };
+    competitionStatsRef.current = next;
+    setCompetitionStats(next);
+  }
+
+  function recordCompletedEncounter() {
+    const encounterId = `wave-${waveIndex}`;
+    if (completedEncounterIdsRef.current.has(encounterId)) return;
+
+    completedEncounterIdsRef.current.add(encounterId);
+    const current = competitionStatsRef.current;
+    const next = {
+      ...current,
+      completedEncounters: Math.min(
+        ACTIVE_WAVE_COUNT,
+        completedEncounterIdsRef.current.size
+      ),
+    };
+    competitionStatsRef.current = next;
+    setCompetitionStats(next);
+  }
+
+  function finalizeCompetitionRun(victory) {
+    const finalScore = calculateNumberSequenceScore({
+      ...competitionStatsRef.current,
+      victory,
+    });
+    const result = competitionAttemptRef.current.finalize({
+      playerSlot: "single",
+      finalScore,
+      outcome: victory ? "win" : "loss",
+    });
+    setCompetitionResult(result);
+    return result;
+  }
+
   const beginBattle = useCallback(
     (index) => {
       const nextWave = WAVES[index];
@@ -2364,6 +2447,7 @@ export default function NumberSequence({ onHome }) {
   );
 
   function resetRunState() {
+    resetCompetitionScoring();
     setWaveIndex(0);
     setPuzzleIndex(0);
     setEnemyHp(WAVES[0].enemy.hp);
@@ -2434,44 +2518,6 @@ export default function NumberSequence({ onHome }) {
 
   function requestReturnHome() {
     setConfirmHome(true);
-  }
-
-  function toggleMusic() {
-    unlockAudioExperience();
-
-    const next = !musicOn;
-    setMusicOn(next);
-
-    const audio = ensureAudio();
-    if (audio?.score) {
-      audio.score.gain.setTargetAtTime(
-        next ? 0.34 : 0,
-        audio.ctx.currentTime,
-        0.04
-      );
-    }
-
-    if (!next) {
-      stopResultScore();
-    } else {
-      const key = desiredMusicKey();
-      if (key) playMusic(key);
-    }
-  }
-
-  function toggleSfx() {
-    unlockAudioExperience();
-
-    if (!sfxOn) {
-      const audio = ensureAudio();
-      if (audio?.sfx) {
-        audio.sfxOn = true;
-        audio.sfx.gain.setValueAtTime(0.96, audio.ctx.currentTime);
-      }
-      playSfx("click");
-    }
-
-    setSfxOn((value) => !value);
   }
 
   function toggleLang() {
@@ -2758,6 +2804,7 @@ export default function NumberSequence({ onHome }) {
   }
 
   function finishWave() {
+    recordCompletedEncounter();
     setEnemyDying(true);
     showDialogue(enemy.defeat[lang], "defeat", 3600);
 
@@ -2773,15 +2820,16 @@ export default function NumberSequence({ onHome }) {
     later(() => {
       if (isFinalWave) {
         setPhase("battle");
+        finalizeCompetitionRun(true);
         setStatus("won");
         reportWin();
         return;
       }
 
-      const nextIndex = waveIndex + 1;
+      const nextIndex = ACTIVE_WAVE_INDICES[routeIndex + 1];
       const nextWave = WAVES[nextIndex];
       const nextMeta = WAVE_META[nextIndex];
-      const goingToBoss = nextIndex === WAVES.length - 1;
+      const goingToBoss = nextIndex === FINAL_WAVE_INDEX;
 
       playSfx("wave");
       setSelectedTarget(null);
@@ -2849,6 +2897,7 @@ export default function NumberSequence({ onHome }) {
 
     setSelected(option);
     tickSkillCooldowns();
+    recordCompetitionAnswer(option === puzzle.answer);
 
     const nextTurn = turnCount + 1;
     setTurnCount(nextTurn);
@@ -3104,6 +3153,7 @@ export default function NumberSequence({ onHome }) {
       advanceEnemyTurn(nextTurn);
 
       if (nextHearts <= 0) {
+        finalizeCompetitionRun(false);
         setStatus("lost");
         setDeathFx(true);
         later(() => setDeathFx(false), 2400);
@@ -3155,7 +3205,10 @@ export default function NumberSequence({ onHome }) {
         ref={canvasRef}
         onPointerDownCapture={handleGlobalPointerDown}
         data-lang={lang}
-        style={{ transform: `scale(${canvasScale.x}, ${canvasScale.y})` }}
+        style={{
+          "--ns-canvas-scale": canvasScale.x,
+          transform: `scale(${canvasScale.x}, ${canvasScale.y})`,
+        }}
       >
         {gameMode === "home" ? (
           <section className="ns-home">
@@ -3206,20 +3259,6 @@ export default function NumberSequence({ onHome }) {
               <div className="ns-home-tools">
                 <button type="button" onClick={toggleLang} className="ns-home-tool">
                   {lang === "zh" ? "中 / EN" : "EN / 中"}
-                </button>
-                <button
-                  type="button"
-                  onClick={toggleMusic}
-                  className={`ns-home-tool ${musicOn ? "is-on" : ""}`}
-                >
-                  ♫ {t.music} {musicOn ? t.soundOn : t.soundOff}
-                </button>
-                <button
-                  type="button"
-                  onClick={toggleSfx}
-                  className={`ns-home-tool ${sfxOn ? "is-on" : ""}`}
-                >
-                  ◉ {t.sfx} {sfxOn ? t.soundOn : t.soundOff}
                 </button>
               </div>
             </header>
@@ -3303,21 +3342,28 @@ export default function NumberSequence({ onHome }) {
           <span className="ns-journey-title">{wave.chapter[lang]}</span>
 
           <div className="ns-route" aria-label="encounter progress">
-            {WAVES.map((entry, index) => (
-              <span
-                key={index}
-                className={[
-                  "ns-route-node",
-                  index < waveIndex ? "is-cleared" : "",
-                  index === waveIndex ? "is-current" : "",
-                  entry.enemy.kind === "boss" ? "is-boss" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                {index < waveIndex ? "✓" : entry.enemy.kind === "boss" ? "∞" : index + 1}
-              </span>
-            ))}
+            {ACTIVE_WAVE_INDICES.map((waveIndex, index) => {
+              const entry = WAVES[waveIndex];
+              return (
+                <span
+                  key={waveIndex}
+                  className={[
+                    "ns-route-node",
+                    index < routeIndex ? "is-cleared" : "",
+                    index === routeIndex ? "is-current" : "",
+                    entry.enemy.kind === "boss" ? "is-boss" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  {index < routeIndex
+                    ? "✓"
+                    : entry.enemy.kind === "boss"
+                    ? "∞"
+                    : index + 1}
+                </span>
+              );
+            })}
           </div>
         </div>
 
@@ -3331,25 +3377,6 @@ export default function NumberSequence({ onHome }) {
             <b>{t.exitShort}</b>
           </button>
 
-          <div className="ns-audio-controls">
-            <button
-              type="button"
-              className={`ns-audio-toggle ${musicOn ? "is-on" : ""}`}
-              onClick={toggleMusic}
-              aria-label={t.music}
-            >
-              ♫
-            </button>
-            <button
-              type="button"
-              className={`ns-audio-toggle ${sfxOn ? "is-on" : ""}`}
-              onClick={toggleSfx}
-              aria-label={t.sfx}
-            >
-              ◉
-            </button>
-          </div>
-
           <button
             type="button"
             className="ns-lang"
@@ -3361,12 +3388,17 @@ export default function NumberSequence({ onHome }) {
             <span className={lang === "en" ? "is-on" : ""}>EN</span>
           </button>
 
+          <div className="ns-competition-score" aria-label="Competition score">
+            <span>SCORE</span>
+            <strong>{displayedCompetitionScore}</strong>
+          </div>
+
           <div className="ns-encounter-badge">
             <span>{t.encounter}</span>
             <strong>
-              {waveIndex + 1}
+              {routeIndex + 1}
               <i>/</i>
-              {WAVES.length}
+              {ACTIVE_WAVE_COUNT}
             </strong>
           </div>
         </div>
@@ -3914,8 +3946,8 @@ export default function NumberSequence({ onHome }) {
                 <span>{t.resultStage}</span>
                 <strong>
                   {status === "won"
-                    ? `${WAVES.length}/${WAVES.length}`
-                    : `${Math.min(waveIndex + 1, WAVES.length)}/${WAVES.length}`}
+                    ? `${ACTIVE_WAVE_COUNT}/${ACTIVE_WAVE_COUNT}`
+                    : `${Math.min(routeIndex + 1, ACTIVE_WAVE_COUNT)}/${ACTIVE_WAVE_COUNT}`}
                 </strong>
               </div>
               <div>
@@ -3926,15 +3958,19 @@ export default function NumberSequence({ onHome }) {
                 <span>{t.resultCombo}</span>
                 <strong>×{maxCombo}</strong>
               </div>
+              <div className="ns-ending-score">
+                <span>FINAL SCORE</span>
+                <strong>{displayedCompetitionScore}</strong>
+              </div>
             </div>
 
             <div className="ns-ending-actions">
-              <button type="button" className="ns-ending-button" onClick={restart}>
+              <button type="button" className="ns-ending-button" onClick={onPostGameHome ?? restart}>
                 <span>{status === "won" ? t.playAgain : t.restart}</span>
                 <i>✦</i>
               </button>
 
-              <button type="button" className="ns-ending-button ns-ending-button--ghost" onClick={requestReturnHome}>
+              <button type="button" className="ns-ending-button ns-ending-button--ghost" onClick={onPostGameHome ?? requestReturnHome}>
                 <span>{t.returnEntrance}</span>
               </button>
             </div>

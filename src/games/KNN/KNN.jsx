@@ -2,6 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import "./KNN.css";
 import knnIslandImg from "../../assets/home-layers/knn.png";
 import backgroundImg from "../../assets/home-layers/background.png";
+import {
+  calculateKnnCompetitionScore,
+  createCompetitionAttempt,
+} from "../../scoring/competitionScoring.js";
 
 const C = {
   blue: { hex: "#57a8ff", rgb: "87,168,255", zh: "蓝", en: "BLUE" },
@@ -11,16 +15,18 @@ const C = {
 const T = {
   zh: {
     title: "KNN 潜行劫案", sub: "潜入 · 破解 · 撤离",
-    intro: "潜入区域并找到保险箱。破解 KNN 安全题，在 3 次机会内选出距离保险箱最近的 K 个指定颜色点，取得钥匙后解锁出口。",
-    start: "开始任务", map: "地图", confirm: "潜入", target: "目标", got: "已收", k: "K", score: "分数", armor: "护甲",
+    intro: "潜入区域并找到保险箱。点击彩色点可查看它与中心保险箱的距离，在 3 次机会内选出最近的 K 个指定颜色点，取得钥匙后解锁出口。",
+    start: "开始任务", map: "地图", confirm: "潜入", target: "目标", got: "已收", k: "K", score: "原游戏分", armor: "护甲",
+    accuracy: "准确奖励", competitionScore: "竞赛分", finalScore: "最终得分", completionBonus: "通关奖励",
     collect: "寻找保险箱", escape: "前往出口", run: "奔跑", caught: "被发现！", lost: "丢失目标", picked: "已收集",
     allGot: "全部收齐！前往出口", win: "任务完成", lose: "任务失败", replay: "再来一次", lang: "EN", paused: "已暂停", resume: "继续", cd: "冷却",
     interact: "互动 (F)", blockedDoor: "有物体阻挡，无法关门！"
   },
   en: {
     title: "KNN HEIST", sub: "Infiltrate · Crack · Extract",
-    intro: "Find the vault, solve the KNN security puzzle within 3 attempts, take the key, then unlock the final exit. Running near guards reveals your position!",
-    start: "START", map: "MAP", confirm: "INFILTRATE", target: "TARGET", got: "GOT", k: "K", score: "SCORE", armor: "ARMOR",
+    intro: "Find the vault. Tap colored dots to measure their distances from the central vault, then select the K nearest dots of the required color within 3 attempts. Grab the key and escape!",
+    start: "START", map: "MAP", confirm: "INFILTRATE", target: "TARGET", got: "GOT", k: "K", score: "GAME SCORE", armor: "ARMOR",
+    accuracy: "ACCURACY", competitionScore: "COMPETITION", finalScore: "FINAL SCORE", completionBonus: "CLEAR BONUS",
     collect: "FIND THE VAULT", escape: "HEAD TO EXIT", run: "RUN", caught: "SPOTTED!", lost: "LOST", picked: "COLLECTED",
     allGot: "ALL COLLECTED! EXIT", win: "MISSION COMPLETE", lose: "MISSION FAILED", replay: "PLAY AGAIN", lang: "中文", paused: "PAUSED", resume: "RESUME", cd: "CD",
     interact: "INTERACT (F)", blockedDoor: "BLOCKED!"
@@ -32,6 +38,7 @@ const WALK = 8, RUN = 14;
 const RUN_DUR = 3500, RUN_CD = 3000;
 const MAX_ARMOR = 5, VIS_R = 14.5, VIS_A = Math.PI / 2.5;
 const NOISE_R = 9; 
+const COMPETITION_LEVEL_COUNT = 3;
 
 // 地图构建助手，精确计算带缺口的墙壁和门，彻底杜绝交叉穿模
 const uid = () => Math.random().toString(36).slice(2, 7);
@@ -498,6 +505,16 @@ function openNearbyGuardDoors(g, doors) {
   });
 }
 
+// The same Euclidean-distance formula is used for scoring and on-screen measurements.
+// Coordinates lie on a virtual 100-by-100 plane with the vault at (50, 50).
+function getKnnDistance(point) {
+  return Math.hypot(point.x - 50, point.y - 50);
+}
+
+function formatKnnDistance(point) {
+  return getKnnDistance(point).toFixed(3);
+}
+
 function createKnnPuzzle(target, k, count) {
   const others = Object.keys(C).filter(c => c !== target);
 
@@ -523,8 +540,8 @@ function createKnnPuzzle(target, k, count) {
     .filter(p => p.cls === target)
     .sort(
       (a, b) =>
-        Math.hypot(a.x - 50, a.y - 50) -
-        Math.hypot(b.x - 50, b.y - 50)
+        getKnnDistance(a) -
+        getKnnDistance(b)
     )
     .slice(0, k)
     .map(p => p.id);
@@ -1320,8 +1337,8 @@ function BigMap({ guards, walls, doors, player, safe, hasKey, target, k, lang, t
   );
 }
 
-export default function KNN() {
-  const [lang, setLang] = useState("zh");
+export default function KNN({ onHome }) {
+  const [lang, setLang] = useState("en");
   const t = T[lang];
   const [screen, setScreen] = useState("start");
   const [showBigMap, setShowBigMap] = useState(false);
@@ -1332,8 +1349,11 @@ export default function KNN() {
   const [showPuzzle, setShowPuzzle] = useState(false);
   const [puzzleData, setPuzzleData] = useState(null);
   const [selected, setSelected] = useState([]);
+  const [inspectedId, setInspectedId] = useState(null);
   const [attempts, setAttempts] = useState(3);
   const [score, setScore] = useState(0);
+  const [accuracyBonus, setAccuracyBonus] = useState(0);
+  const [competitionFinal, setCompetitionFinal] = useState(null);
   const [armor, setArmor] = useState(MAX_ARMOR);
   const [toast, setToast] = useState(null);
   const [paused, setPaused] = useState(false);
@@ -1341,11 +1361,12 @@ export default function KNN() {
   const [runLeft, setRunLeft] = useState(0);
   const [move, setMove] = useState({ x: 0, y: 0 });
   const [time, setTime] = useState(0);
-  const [music, setMusic] = useState(true);
-  const [sfxOn, setSfxOn] = useState(true);
+  const music = true;
+  const sfxOn = true;
   const [hurt, setHurt] = useState(0);
   const [canInteract, setCanInteract] = useState(false);
   const [resultType, setResultType] = useState("win");
+  const inspectedPoint = puzzleData?.points.find(p => p.id === inspectedId) ?? null;
 
   const cvRef = useRef(null), stRef = useRef(null);
   const pRef = useRef({ x: 0, z: 42 });
@@ -1375,10 +1396,51 @@ export default function KNN() {
   const runCdRef = useRef(0);
   const runHeldRef = useRef(false);
   const runReadyRef = useRef(true);
+  const gameScoreRef = useRef(0);
+  const accuracyBonusRef = useRef(0);
+  const accuracyAwardedLevelsRef = useRef(new Set());
+  const competitionAttemptRef = useRef(null);
+  const competitionFinalRef = useRef(null);
 
   const show = useCallback((txt, type = "info", ms = 900) => {
     const id = uid(); setToast({ id, txt, type });
     setTimeout(() => setToast(v => v?.id === id ? null : v), ms);
+  }, []);
+
+  const finalizeCompetition = useCallback(({
+    outcome,
+    gameScore: finalGameScore = gameScoreRef.current,
+    accuracy: finalAccuracy = accuracyBonusRef.current,
+    finalArmor = armorRef.current,
+  }) => {
+    if (competitionFinalRef.current || !competitionAttemptRef.current) {
+      return competitionFinalRef.current;
+    }
+
+    const victory = outcome === "win";
+    const completionBonus = victory ? 1000 + 50 * finalArmor : 0;
+    const finalScore = calculateKnnCompetitionScore({
+      gameScore: finalGameScore,
+      accuracyBonus: finalAccuracy,
+      victory,
+      armor: finalArmor,
+    });
+    const result = competitionAttemptRef.current.finalize({
+      playerSlot: "single",
+      finalScore,
+      outcome,
+    });
+    const snapshot = Object.freeze({
+      ...result,
+      gameScore: finalGameScore,
+      accuracyBonus: finalAccuracy,
+      armor: finalArmor,
+      completionBonus,
+    });
+
+    competitionFinalRef.current = snapshot;
+    setCompetitionFinal(snapshot);
+    return snapshot;
   }, []);
 
   const ensureAudio = useCallback(() => {
@@ -1455,6 +1517,7 @@ export default function KNN() {
     setShowPuzzle(false);
     setPuzzleData(null);
     setSelected([]);
+    setInspectedId(null);
     setAttempts(3);
     setShowBigMap(true);
     setRunReady(true);
@@ -1463,7 +1526,15 @@ export default function KNN() {
   }, []);
 
   const resetGame = useCallback(() => {
-    setScore(0); setArmor(MAX_ARMOR); armorRef.current = MAX_ARMOR; setTime(0); setToast(null);
+    competitionAttemptRef.current = createCompetitionAttempt("knn");
+    competitionFinalRef.current = null;
+    gameScoreRef.current = 0;
+    accuracyBonusRef.current = 0;
+    accuracyAwardedLevelsRef.current = new Set();
+    setScore(0);
+    setAccuracyBonus(0);
+    setCompetitionFinal(null);
+    setArmor(MAX_ARMOR); armorRef.current = MAX_ARMOR; setTime(0); setToast(null);
     setPaused(false); pausedRef.current = false; setHurt(0); setResultType("win");
     activeMsRef.current = 0;
     loadLevel(0);
@@ -1483,19 +1554,6 @@ export default function KNN() {
     if (music && b.paused) b.play().catch(() => { });
   }, [ensureAudio, ensureBgm, music]);
 
-  const toggleMusic = useCallback(() => {
-    const next = !music;
-    setMusic(next);
-
-    const b = ensureBgm();
-    if (next) {
-      ensureAudio();
-      b.play().catch(() => { });
-    } else {
-      b.pause();
-    }
-  }, [ensureAudio, ensureBgm, music]);
-
   // Return from the live mission to the KNN realm intro.
   // Starting again will reset the mission through startGame().
   const returnToIntro = useCallback(() => {
@@ -1510,6 +1568,7 @@ export default function KNN() {
     setShowBigMap(false);
     setShowPuzzle(false);
     setSelected([]);
+    setInspectedId(null);
     setCanInteract(false);
     setScreen("start");
   }, []);
@@ -1526,6 +1585,7 @@ export default function KNN() {
     ) {
       setPuzzleData(createKnnPuzzle(lv.tgt, lv.k, lv.puzzleN));
       setSelected([]);
+      setInspectedId(null);
       setAttempts(3);
       setShowPuzzle(true);
       puzzleRef.current = true;
@@ -1565,6 +1625,9 @@ export default function KNN() {
     const lv = levelRef.current;
     if (!lv) return;
 
+    // Always measure the tapped dot, even when the answer already has K selections.
+    // Measuring is free: only CONFIRM consumes an attempt if the answer is wrong.
+    setInspectedId(id);
     setSelected(prev => {
       if (prev.includes(id)) return prev.filter(x => x !== id);
       if (prev.length >= lv.k) return prev;
@@ -1574,19 +1637,30 @@ export default function KNN() {
 
   const submitPuzzle = useCallback(() => {
     const lv = levelRef.current;
-    if (!lv || !puzzleData) return;
+    if (!lv || !puzzleData || hasKeyRef.current || competitionFinalRef.current) return;
 
     const answer = [...selected].sort().join(",");
     const correct = [...puzzleData.correct].sort().join(",");
 
     if (answer === correct) {
+      let nextAccuracy = accuracyBonusRef.current;
+      if (!accuracyAwardedLevelsRef.current.has(siteIdx)) {
+        accuracyAwardedLevelsRef.current.add(siteIdx);
+        const levelBonus = attempts === 3 ? 200 : attempts === 2 ? 100 : 0;
+        nextAccuracy += levelBonus;
+        accuracyBonusRef.current = nextAccuracy;
+        setAccuracyBonus(nextAccuracy);
+      }
+
+      const nextGameScore = gameScoreRef.current + 500;
+      gameScoreRef.current = nextGameScore;
+      setScore(nextGameScore);
       setHasKey(true);
       hasKeyRef.current = true;
       phaseRef.current = "escape";
       setPhase("escape");
       setShowPuzzle(false);
       puzzleRef.current = false;
-      setScore(s => s + 500);
       sfx("clear");
       show(
         lang === "zh" ? "获得钥匙！出口已解锁" : "KEY ACQUIRED! EXIT UNLOCKED",
@@ -1599,6 +1673,7 @@ export default function KNN() {
     const left = attempts - 1;
     setAttempts(left);
     setSelected([]);
+    setInspectedId(null);
 
     if (left <= 0) {
       doneRef.current = true;
@@ -1606,6 +1681,7 @@ export default function KNN() {
       setTime(activeMsRef.current / 1000);
       setShowPuzzle(false);
       puzzleRef.current = false;
+      finalizeCompetition({ outcome: "loss" });
       setResultType("lose");
       setScreen("result");
       bgmRef.current?.pause();
@@ -1617,7 +1693,7 @@ export default function KNN() {
       "warn",
       1200
     );
-  }, [attempts, lang, puzzleData, selected, sfx, show]);
+  }, [attempts, finalizeCompetition, lang, puzzleData, selected, sfx, show, siteIdx]);
 
   useEffect(() => { moveRef.current = move; }, [move]);
   useEffect(() => { pausedRef.current = paused; }, [paused]);
@@ -1686,6 +1762,7 @@ export default function KNN() {
       setResultType(type);
       setTime(activeMsRef.current / 1000);
       if (type === "lose") {
+        finalizeCompetition({ outcome: "loss" });
         setTimeout(() => {
           setScreen("result");
           bgmRef.current?.pause();
@@ -1951,11 +2028,21 @@ export default function KNN() {
         doneRef.current = true;
         runHeldRef.current = false;
         sfx("win");
-        setScore(s => s + 800);
+        const nextGameScore = gameScoreRef.current + 800;
+        gameScoreRef.current = nextGameScore;
+        setScore(nextGameScore);
         setTime(activeMsRef.current / 1000);
+        const next = siteIdx + 1;
+        if (next >= COMPETITION_LEVEL_COUNT) {
+          finalizeCompetition({
+            outcome: "win",
+            gameScore: nextGameScore,
+            accuracy: accuracyBonusRef.current,
+            finalArmor: armorRef.current,
+          });
+        }
         setTimeout(() => {
-          const next = siteIdx + 1;
-          if (next >= LEVELS_DATA.length) {
+          if (next >= COMPETITION_LEVEL_COUNT) {
             setResultType("win");
             setScreen("result");
             bgmRef.current?.pause();
@@ -1987,7 +2074,18 @@ export default function KNN() {
 
     rafRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [screen, loadLevel, sfx, show, siteIdx, t]);
+  }, [screen, finalizeCompetition, loadLevel, sfx, show, siteIdx, t]);
+
+  const liveCompetitionScore = calculateKnnCompetitionScore({
+    gameScore: score,
+    accuracyBonus,
+    victory: false,
+    armor,
+  });
+  const competitionScore = competitionFinal?.finalScore ?? liveCompetitionScore;
+  const resultGameScore = competitionFinal?.gameScore ?? score;
+  const resultAccuracyBonus = competitionFinal?.accuracyBonus ?? accuracyBonus;
+  const resultCompletionBonus = competitionFinal?.completionBonus ?? 0;
 
   if (screen === "start") {
     return (
@@ -2004,18 +2102,6 @@ export default function KNN() {
         <div className="knn-start-toolbar">
           <button onClick={() => setLang(v => v === "zh" ? "en" : "zh")}>
             {t.lang}
-          </button>
-          <button
-            className={music ? "active" : ""}
-            onClick={toggleMusic}
-          >
-            ♪ {lang === "zh" ? "音乐" : "MUSIC"}
-          </button>
-          <button
-            className={sfxOn ? "active" : ""}
-            onClick={() => setSfxOn(v => !v)}
-          >
-            ◉ {lang === "zh" ? "音效" : "SFX"}
           </button>
         </div>
 
@@ -2091,16 +2177,21 @@ export default function KNN() {
         <section className={`mission-result ${resultType === "lose" ? "failed" : ""}`}>
           <div className="result-sigil" aria-hidden="true">K</div>
           <span>{resultType === "lose" ? t.lose : t.win}</span>
-          <h1>{score.toLocaleString()}</h1>
-          <small>{t.score}</small>
+          <h1>{competitionScore.toLocaleString()}</h1>
+          <small>{t.finalScore}</small>
+          <div className="knn-result-score-breakdown">
+            <div><span>{t.score}</span><b>{resultGameScore.toLocaleString()}</b></div>
+            <div><span>{t.accuracy}</span><b>+{resultAccuracyBonus.toLocaleString()}</b></div>
+            <div><span>{t.completionBonus}</span><b>+{resultCompletionBonus.toLocaleString()}</b></div>
+          </div>
           <div className="result-grid">
-            <div><b>{siteIdx + 1}/5</b><span>ROOMS</span></div>
+            <div><b>{Math.min(siteIdx + 1, COMPETITION_LEVEL_COUNT)}/{COMPETITION_LEVEL_COUNT}</b><span>ROOMS</span></div>
             <div><b>{time.toFixed(1)}s</b><span>TIME</span></div>
             <div><b>{armor}/{MAX_ARMOR}</b><span>{t.armor}</span></div>
           </div>
           <div className="result-actions">
-            <button className="deploy-btn" onClick={startGame}><span>{t.replay}</span><b>↻</b></button>
-            <button className="knn-result-intro-btn" onClick={returnToIntro}>
+            <button className="deploy-btn" onClick={onHome ?? startGame}><span>{t.replay}</span><b>↻</b></button>
+            <button className="knn-result-intro-btn" onClick={onHome ?? returnToIntro}>
               <span>{lang === "zh" ? "返回任务入口" : "BACK TO BRIEFING"}</span>
               <b>↩</b>
             </button>
@@ -2160,21 +2251,16 @@ export default function KNN() {
               <em>{lang === "zh" ? "入口" : "INTRO"}</em>
             </button>
             <button onClick={() => setLang(v => v === "zh" ? "en" : "zh")}>{t.lang}</button>
-            <button
-              className={music ? "is-audio-on" : ""}
-              onClick={toggleMusic}
-              aria-label={lang === "zh" ? "背景音乐" : "Background music"}
-            >
-              {music ? "♪" : "×♪"}
-            </button>
             <button onClick={() => setPaused(v => !v)}>{paused ? "▶" : "Ⅱ"}</button>
           </div>
         </header>
 
         <div className="mission-strip">
-          <div><span>LEVEL</span><b>{siteIdx + 1}<i>/</i>5</b></div>
+          <div><span>LEVEL</span><b>{siteIdx + 1}<i>/</i>{COMPETITION_LEVEL_COUNT}</b></div>
           <div><span>{t.k}</span><b>{lv?.k ?? 3}</b></div>
-          <div><span>{t.score}</span><b>{score}</b></div>
+          <div className="knn-game-score-stat"><span>{t.score}</span><b>{score}</b></div>
+          <div className="knn-accuracy-stat"><span>{t.accuracy}</span><b>+{accuracyBonus}</b></div>
+          <div className="knn-competition-stat"><span>{t.competitionScore}</span><b>{competitionScore}</b></div>
           <div className="armor-stat"><span>{t.armor}</span><b>{Array.from({ length: MAX_ARMOR }, (_, i) => <i key={i} className={i < armor ? "alive" : ""} />)}</b></div>
         </div>
 
@@ -2234,16 +2320,33 @@ export default function KNN() {
                 <b>{lang === "zh" ? `机会 ${attempts}/3` : `TRIES ${attempts}/3`}</b>
               </div>
 
+              <p className="knn-puzzle-help">
+                {lang === "zh"
+                  ? "点击任意彩色点即可测量它与中心 🔐 的距离；再次点击可取消选中。测量不会消耗机会。"
+                  : "Tap any dot to measure its distance from the central 🔐. Tap again to deselect. Measuring costs no attempts."}
+              </p>
+
               <div className="knn-puzzle-board">
                 <div className="knn-board-orbit orbit-one" />
                 <div className="knn-board-orbit orbit-two" />
+                {inspectedPoint && (
+                  <svg
+                    className="knn-distance-line"
+                    viewBox="0 0 100 100"
+                    preserveAspectRatio="none"
+                    aria-hidden="true"
+                  >
+                    <line x1="50" y1="50" x2={inspectedPoint.x} y2={inspectedPoint.y} />
+                  </svg>
+                )}
                 <div className="knn-query"><span>🔐</span></div>
-                {puzzleData.points.map(p => (
+                {puzzleData.points.map((p, i) => (
                   <button
                     key={p.id}
                     type="button"
-                    aria-label={`${p.cls} point`}
-                    className={`knn-point ${selected.includes(p.id) ? "selected" : ""}`}
+                    aria-label={`${lang === "zh" ? "点" : "Point"} ${i + 1}, ${lang === "zh" ? C[p.cls].zh : C[p.cls].en}`}
+                    aria-pressed={selected.includes(p.id)}
+                    className={`knn-point ${selected.includes(p.id) ? "selected" : ""} ${inspectedId === p.id ? "inspected" : ""}`}
                     style={{
                       left: `${p.x}%`,
                       top: `${p.y}%`,
@@ -2252,6 +2355,60 @@ export default function KNN() {
                     onClick={() => togglePuzzlePoint(p.id)}
                   />
                 ))}
+                {inspectedPoint && (
+                  <div
+                    className={`knn-distance-bubble ${inspectedPoint.y < 28 ? "below" : "above"}`}
+                    style={{
+                      left: `${clamp(inspectedPoint.x, 14, 86)}%`,
+                      top: `${inspectedPoint.y}%`
+                    }}
+                    aria-hidden="true"
+                  >
+                    <span>{lang === "zh" ? "距离" : "DIST"}</span>
+                    <strong>{formatKnnDistance(inspectedPoint)}</strong>
+                  </div>
+                )}
+              </div>
+
+              <div className="knn-distance-readout" role="status" aria-live="polite">
+                {inspectedPoint ? (
+                  <>
+                    <div className="knn-readout-point">
+                      <i style={{ background: C[inspectedPoint.cls].hex }} />
+                      <span>
+                        {lang === "zh" ? "当前测量" : "MEASURING"}
+                        <b> P{Number(inspectedPoint.id.slice(1)) + 1} · {lang === "zh" ? C[inspectedPoint.cls].zh : C[inspectedPoint.cls].en}</b>
+                      </span>
+                    </div>
+                    <strong>{formatKnnDistance(inspectedPoint)} <small>{lang === "zh" ? "单位" : "units"}</small></strong>
+                  </>
+                ) : (
+                  <span className="knn-readout-placeholder">
+                    {lang === "zh" ? "点击圆点，查看它到中心保险箱的距离" : "Select a dot to see its distance from the central vault"}
+                  </span>
+                )}
+              </div>
+
+              <div className="knn-selected-measurements">
+                <span className="knn-measurements-label">
+                  {lang === "zh" ? "已选点的距离（由近到远）" : "SELECTED DOT DISTANCES (NEAREST FIRST)"}
+                </span>
+                <div className="knn-measurements-list">
+                  {selected.length ? (
+                    puzzleData.points
+                      .filter(p => selected.includes(p.id))
+                      .sort((a, b) => getKnnDistance(a) - getKnnDistance(b))
+                      .map(p => (
+                        <span className="knn-measurement-chip" key={p.id}>
+                          <i style={{ background: C[p.cls].hex }} />
+                          P{Number(p.id.slice(1)) + 1}
+                          <b>{formatKnnDistance(p)}</b>
+                        </span>
+                      ))
+                  ) : (
+                    <em>{lang === "zh" ? "尚未选择任何点" : "NO DOTS SELECTED"}</em>
+                  )}
+                </div>
               </div>
 
               <div className="knn-puzzle-bottom">

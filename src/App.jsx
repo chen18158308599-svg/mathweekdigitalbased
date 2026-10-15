@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
 import Home from "./Home/Home";
+import GamePasswordGate from "./components/GamePasswordGate";
+import PostGameSubmission from "./components/PostGameSubmission";
+import { clearPostGameResult } from "./integration/mathverseApi.js";
+import { useScoreRecording } from "./integration/useScoreRecording.js";
 
 import AverageGame from "./games/AverageGame/AverageGame";
 import Conway from "./games/Conway/Conway";
@@ -11,8 +15,124 @@ import NumberSequence from "./games/NumberSequence/NumberSequence";
 import Planarity from "./games/Planarity/Planarity";
 import SymmetryGame from "./games/Symmetry/Symmetry";
 
+function HomeNavigation({ onHome }) {
+  const [expanded, setExpanded] = useState(false);
+  const navigationRef = useRef(null);
+
+  useEffect(() => {
+    if (!expanded) return undefined;
+
+    function handlePointerDown(event) {
+      if (!navigationRef.current?.contains(event.target)) {
+        setExpanded(false);
+      }
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        setExpanded(false);
+        navigationRef.current
+          ?.querySelector(".home-navigation__tab")
+          ?.focus();
+      }
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown, true);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown, true);
+      window.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, [expanded]);
+
+  return (
+    <div
+      ref={navigationRef}
+      className={`home-navigation${expanded ? " is-expanded" : ""}`}
+    >
+      <button
+        type="button"
+        className="home-navigation__tab"
+        onClick={() => setExpanded((value) => !value)}
+        aria-label={expanded ? "Close Home navigation" : "Open Home navigation"}
+        aria-expanded={expanded}
+        aria-controls="home-navigation-action"
+        title={expanded ? "Close Home navigation" : "Open Home navigation"}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          {expanded ? (
+            <path d="m15 5-7 7 7 7" />
+          ) : (
+            <path d="m9 5 7 7-7 7" />
+          )}
+        </svg>
+      </button>
+      <button
+        id="home-navigation-action"
+        type="button"
+        className="home-navigation__action"
+        onClick={onHome}
+        aria-label="Return to Home"
+        title="Home"
+        aria-hidden={!expanded}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 11.5 12 4l9 7.5" />
+          <path d="M5.5 10v9h5v-5h3v5h5v-9" />
+        </svg>
+        <span>Home</span>
+      </button>
+    </div>
+  );
+}
+
 export default function App() {
   const [page, setPage] = useState("home");
+  const [selectedGame, setSelectedGame] = useState(null);
+  const [authorizedGame, setAuthorizedGame] = useState(null);
+  const {
+    pendingSubmission,
+    updatePlayer,
+    submitPlayer,
+    clearPending,
+  } = useScoreRecording();
+
+  function selectGame(gameId) {
+    setSelectedGame(gameId);
+    setAuthorizedGame(null);
+    setPage("password");
+  }
+
+  function returnHome() {
+    setPage("home");
+    setSelectedGame(null);
+    setAuthorizedGame(null);
+  }
+
+  function authorizeGame() {
+    if (!selectedGame) return;
+    setAuthorizedGame(selectedGame);
+    setPage(selectedGame);
+  }
+
+  function finishPostGame() {
+    if (pendingSubmission) clearPostGameResult(pendingSubmission.attemptId);
+    clearPending();
+    returnHome();
+  }
+
+  const postGameReady = pendingSubmission?.requiredSlots?.every(
+    (slot) => pendingSubmission.results[slot]
+  );
+  const postGameSubmission = postGameReady ? (
+    <PostGameSubmission
+      key={pendingSubmission.attemptId}
+      submission={pendingSubmission}
+      onUpdatePlayer={updatePlayer}
+      onSubmitPlayer={submitPlayer}
+      onReturnHome={finishPostGame}
+    />
+  ) : null;
 
   /* =====================================================
      HOME
@@ -20,10 +140,25 @@ export default function App() {
 
   if (page === "home") {
     return (
-      <Home
-        onSelectGame={setPage}
+      <>
+        <Home onSelectGame={selectGame} />
+        {postGameSubmission}
+      </>
+    );
+  }
+
+  if (page === "password" && selectedGame) {
+    return (
+      <GamePasswordGate
+        gameId={selectedGame}
+        onAuthorized={authorizeGame}
+        onBack={returnHome}
       />
     );
+  }
+
+  if (authorizedGame !== page) {
+    return <Home onSelectGame={selectGame} />;
   }
 
   /* =====================================================
@@ -32,25 +167,7 @@ export default function App() {
 
   return (
     <>
-      {/* =========================
-          GLOBAL HOME BUTTON
-      ========================= */}
-
-      <button
-        type="button"
-        className="back-home-button"
-        onClick={() => setPage("home")}
-        aria-label="Return to Home"
-        title="Home"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path d="M3 11.5L12 4l9 7.5" />
-          <path d="M5.5 10v9h5v-5h3v5h5v-9" />
-        </svg>
-      </button>
+      <HomeNavigation onHome={returnHome} />
 
       {/* =========================
           AVERAGE GAME
@@ -65,7 +182,7 @@ export default function App() {
       ========================= */}
 
       {page === "conway" && (
-        <Conway />
+        <Conway onBack={returnHome} />
       )}
 
       {/* =========================
@@ -73,7 +190,7 @@ export default function App() {
       ========================= */}
 
       {page === "deal" && (
-        <DealOrNoDeal />
+        <DealOrNoDeal onBack={returnHome} />
       )}
 
       {/* =========================
@@ -81,7 +198,7 @@ export default function App() {
       ========================= */}
 
       {page === "knn" && (
-        <KNN />
+        <KNN onHome={returnHome} />
       )}
 
       {/* =========================
@@ -89,7 +206,9 @@ export default function App() {
       ========================= */}
 
       {page === "sequence" && (
-        <NumberSequence />
+        <NumberSequence
+          onPostGameHome={returnHome}
+        />
       )}
 
       {/* =========================
@@ -97,7 +216,7 @@ export default function App() {
       ========================= */}
 
       {page === "planarity" && (
-        <Planarity />
+        <Planarity onHome={returnHome} />
       )}
 
       {/* =========================
@@ -105,10 +224,9 @@ export default function App() {
       ========================= */}
 
       {page === "symmetry" && (
-        <SymmetryGame
-          onBack={() => setPage("home")}
-        />
+        <SymmetryGame onBack={returnHome} />
       )}
+      {postGameSubmission}
     </>
   );
 }

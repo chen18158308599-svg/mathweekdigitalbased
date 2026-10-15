@@ -2879,12 +2879,6 @@ body{
   filter:brightness(1.08);
 }
 
-.knn-start-toolbar button.active{
-  color:#ffefb8;
-  border-color:rgba(255,223,137,.42);
-  background:linear-gradient(180deg,rgba(80,66,31,.68),rgba(40,34,23,.70));
-}
-
 .knn-hero-layout{
   position:relative;
   z-index:6;
@@ -3348,33 +3342,6 @@ body{
     0 0 18px rgba(255,211,105,.12);
 }
 
-/* active music state in the live HUD */
-.hud-actions button.is-audio-on{
-  color:#ffe79f;
-  border-color:rgba(255,222,132,.32);
-  box-shadow:
-    0 10px 18px rgba(0,0,0,.18),
-    inset 0 1px rgba(255,255,255,.06),
-    0 0 14px rgba(255,210,96,.08);
-}
-
-/* intro page music button: make ON state visually obvious */
-.knn-start-toolbar button.active{
-  position:relative;
-}
-
-.knn-start-toolbar button.active::after{
-  content:"";
-  position:absolute;
-  right:8px;
-  top:8px;
-  width:4px;
-  height:4px;
-  border-radius:50%;
-  background:#ffe49a;
-  box-shadow:0 0 8px rgba(255,222,137,.85);
-}
-
 /* result page: Replay + Back to briefing */
 .result-actions{
   display:grid;
@@ -3444,4 +3411,280 @@ body{
   .hud-actions .knn-intro-return-btn em{
     font-size:6px;
   }
+}
+
+/* Competition scoring */
+.mission-strip .knn-accuracy-stat b{
+  color:#75e1bd;
+}
+
+.mission-strip .knn-competition-stat{
+  background:linear-gradient(180deg,rgba(101,83,203,.24),rgba(37,33,104,.16));
+}
+
+.mission-strip .knn-competition-stat span{
+  color:#ffe4a0;
+}
+
+.mission-strip .knn-competition-stat b{
+  color:#fff0bd;
+  text-shadow:0 0 14px rgba(255,216,126,.22);
+}
+
+.mission-strip>div.knn-game-score-stat{
+  display:flex;
+}
+
+.knn-result-score-breakdown{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:7px;
+  margin:18px 0 8px;
+}
+
+.knn-result-score-breakdown>div{
+  min-width:0;
+  padding:10px 8px;
+  border:1px solid rgba(255,236,184,.12);
+  border-radius:12px;
+  background:linear-gradient(180deg,rgba(84,72,173,.13),rgba(255,255,255,.025));
+}
+
+.knn-result-score-breakdown span{
+  display:block;
+  overflow:hidden;
+  color:#aeb9d4;
+  font-size:7px;
+  font-weight:850;
+  letter-spacing:.1em;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.knn-result-score-breakdown b{
+  display:block;
+  margin-top:5px;
+  color:#f4dfa1;
+  font-size:15px;
+}
+
+.knn-result-score-breakdown>div:nth-child(2) b{
+  color:#75e1bd;
+}
+
+@media (max-width:760px){
+  .knn-result-score-breakdown{gap:5px;}
+  .knn-result-score-breakdown>div{padding:8px 5px;}
+  .knn-result-score-breakdown span{font-size:6px;}
+}
+
+@media (orientation:landscape) and (max-height:600px){
+  .result-screen{
+    overflow:auto;
+    padding:8px;
+  }
+
+  .mission-result{
+    padding:14px 24px;
+  }
+
+  .result-sigil{
+    width:42px;
+    height:42px;
+    margin-bottom:5px;
+    font-size:20px;
+  }
+
+  .mission-result h1{
+    margin-top:4px;
+    font-size:38px;
+  }
+
+  .knn-result-score-breakdown{
+    margin:7px 0 5px;
+  }
+
+  .knn-result-score-breakdown>div{
+    padding:5px;
+  }
+
+  .knn-result-score-breakdown b{
+    margin-top:2px;
+    font-size:12px;
+  }
+
+  .result-grid{
+    margin:6px 0;
+  }
+
+  .result-grid div{
+    padding:7px 6px;
+  }
+
+  .result-actions{
+    gap:5px;
+  }
+
+  .mission-result .deploy-btn,
+  .mission-result .knn-result-intro-btn{
+    height:36px;
+  }
+}
+
+
+/* ================================================================
+   KNN DISTANCE INSPECTOR — measurement is based on the same 100x100
+   coordinate system (center 50,50) used to check the puzzle answer.
+   ================================================================ */
+.knn-puzzle-overlay{
+  box-sizing:border-box;
+  padding:12px;
+  overflow-y:auto;
+}
+.knn-puzzle-panel{
+  max-height:calc(100dvh - 24px);
+  overflow-x:hidden;
+  overflow-y:auto;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(164,178,242,.4) transparent;
+}
+.knn-puzzle-help{
+  margin:0 0 12px;
+  color:#bdc9e8;
+  font-size:11px;
+  line-height:1.5;
+}
+.knn-distance-line{
+  position:absolute;
+  z-index:3;
+  inset:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  overflow:visible;
+}
+.knn-distance-line line{
+  stroke:#ffe7aa;
+  stroke-width:.55;
+  stroke-dasharray:1.5 1.2;
+  vector-effect:non-scaling-stroke;
+  stroke-width:2px;
+  filter:drop-shadow(0 0 3px rgba(255,222,145,.85));
+}
+.knn-puzzle-board .knn-query{z-index:4;pointer-events:none;}
+.knn-puzzle-board .knn-point{z-index:5;touch-action:manipulation;}
+.knn-puzzle-board .knn-point.inspected{
+  z-index:7;
+  outline:3px solid #ffe7a3;
+  outline-offset:3px;
+  box-shadow:0 0 24px rgba(255,224,130,.8),0 0 12px rgba(255,255,255,.35);
+}
+.knn-puzzle-board .knn-point.selected.inspected{
+  outline:4px solid #ffe7a3;
+  transform:translate(-50%,-50%) scale(1.3);
+}
+.knn-distance-bubble{
+  position:absolute;
+  z-index:10;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  max-width:calc(100% - 12px);
+  padding:6px 10px;
+  border:1px solid rgba(255,232,161,.6);
+  border-radius:9px;
+  background:rgba(8,16,42,.96);
+  box-shadow:0 7px 22px rgba(0,0,0,.52),0 0 14px rgba(228,199,111,.24);
+  color:#f8e9bd;
+  white-space:nowrap;
+  pointer-events:none;
+}
+.knn-distance-bubble.above{transform:translate(-50%,calc(-100% - 21px));}
+.knn-distance-bubble.below{transform:translate(-50%,21px);}
+.knn-distance-bubble span{color:#c6cce6;font-size:9px;font-weight:800;letter-spacing:.05em;}
+.knn-distance-bubble strong{font-size:13px;font-variant-numeric:tabular-nums;}
+.knn-distance-readout{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  min-height:49px;
+  gap:12px;
+  margin-top:12px;
+  padding:10px 14px;
+  border:1px solid rgba(252,221,142,.2);
+  border-radius:12px;
+  background:linear-gradient(95deg,rgba(255,218,121,.09),rgba(69,90,171,.12));
+  color:#eff4ff;
+}
+.knn-readout-point{display:flex;align-items:center;gap:10px;min-width:0;}
+.knn-readout-point>i,.knn-measurement-chip>i{
+  display:inline-block;
+  width:11px;
+  height:11px;
+  flex:none;
+  border:1px solid rgba(255,255,255,.7);
+  border-radius:50%;
+  box-shadow:0 0 6px rgba(255,255,255,.15);
+}
+.knn-readout-point>span{font-size:10px;color:#aebce0;}
+.knn-readout-point b{font-size:11px;color:#f5f6ff;white-space:nowrap;}
+.knn-distance-readout>strong{
+  color:#ffe4a0;
+  font-size:20px;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.knn-distance-readout>strong small{font-size:10px;font-weight:600;color:#b8c5e0;}
+.knn-readout-placeholder{font-size:11px;color:#aab9d5;}
+.knn-selected-measurements{margin-top:12px;}
+.knn-measurements-label{
+  color:#bfcbe5;
+  display:block;
+  font-size:9px;
+  letter-spacing:.07em;
+  font-weight:800;
+  margin-bottom:7px;
+}
+.knn-measurements-list{display:flex;flex-wrap:wrap;gap:6px;min-height:28px;}
+.knn-measurements-list>em{color:#7d8fae;font-size:10px;font-style:normal;}
+.knn-measurement-chip{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 8px;
+  border:1px solid rgba(190,206,255,.17);
+  border-radius:8px;
+  background:rgba(255,255,255,.06);
+  color:#e7eeff;
+  font-size:10px;
+  font-weight:700;
+}
+.knn-measurement-chip>i{width:8px;height:8px;}
+.knn-measurement-chip b{color:#f9db94;font-variant-numeric:tabular-nums;}
+@media (max-width:760px){
+  .knn-puzzle-panel{padding:16px;}
+  .knn-puzzle-help{font-size:10px;}
+  .knn-distance-bubble{padding:4px 6px;gap:4px;}
+  .knn-distance-bubble span{font-size:8px;}
+  .knn-distance-bubble strong{font-size:11px;}
+  .knn-distance-readout{padding:8px 10px;}
+  .knn-distance-readout>strong{font-size:16px;}
+  .knn-readout-point>span{font-size:9px;}
+  .knn-readout-point b{font-size:10px;}
+}
+@media (orientation:landscape) and (max-height:720px){
+  .knn-puzzle-board{height:min(42dvh,330px);aspect-ratio:auto;}
+  .knn-puzzle-panel{padding:14px 18px;}
+  .knn-puzzle-help{margin-bottom:8px;}
+  .knn-distance-readout{margin-top:8px;min-height:42px;}
+  .knn-selected-measurements{margin-top:8px;}
+  .knn-puzzle-bottom{margin-top:8px;}
+}
+@media (orientation:portrait) and (max-width:540px){
+  .knn-puzzle-board{aspect-ratio:5 / 4;}
+  .knn-puzzle-panel{padding:14px;}
+  .knn-puzzle-head h2{font-size:16px;}
+  .knn-puzzle-head>b{font-size:12px;}
+  .knn-readout-point b{display:block;}
+  .knn-distance-readout>strong{font-size:15px;}
 }

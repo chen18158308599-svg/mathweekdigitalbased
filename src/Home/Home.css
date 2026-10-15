@@ -81,11 +81,16 @@ body {
   z-index: 999;
 
   width: max-content;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
 
   padding:
-    9px
-    34px
-    13px;
+    10px
+    clamp(16px, 2vw, 34px)
+    12px;
 
   pointer-events: none;
 
@@ -175,13 +180,13 @@ body {
     "Times New Roman",
     serif;
 
-  font-size: 68px;
+  font-size: clamp(30px, 5.4vw, 68px);
 
   font-weight: 800;
 
   line-height: 1;
 
-  letter-spacing: 0.1em;
+  letter-spacing: clamp(0.04em, 0.55vw, 0.1em);
 
   background:
     linear-gradient(
@@ -225,6 +230,21 @@ body {
       5px
       rgba(255, 242, 190, 0.8)
     );
+}
+
+.mathweek-title-kicker,
+.mathweek-title-subtitle {
+  color: #f4d991;
+  font-family:
+    Georgia,
+    "Times New Roman",
+    serif;
+  font-size: clamp(9px, 0.9vw, 13px);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  line-height: 1;
+  white-space: nowrap;
+  text-shadow: 0 1px 5px rgba(255, 210, 110, 0.45);
 }
 
 .mathweek-title-main::after {
@@ -292,8 +312,8 @@ body {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 
-  animation-name: islandFloat;
-  animation-timing-function: linear;
+  animation-name: homeIslandFloat;
+  animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
 
   /*
@@ -322,15 +342,7 @@ body {
   */
   filter: none;
 
-  transform:
-    translate3d(
-      0,
-      0,
-      0
-    );
-
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
+  /* Image follows the animated parent; avoid another forced GPU layer. */
 
   /*
     Hover scale is kept very light.
@@ -435,9 +447,9 @@ body {
 
   width: 25%;
 
-  --float: -14px;
+  --float: -18px;
 
-  animation-duration: 5.2s;
+  animation-duration: 4.0s;
 }
 
 /* Conway */
@@ -448,9 +460,9 @@ body {
 
   width: 25%;
 
-  --float: -16px;
+  --float: -20px;
 
-  animation-duration: 5.8s;
+  animation-duration: 4.4s;
 
   animation-delay: -1.3s;
 }
@@ -463,9 +475,9 @@ body {
 
   width: 25%;
 
-  --float: -13px;
+  --float: -19px;
 
-  animation-duration: 5.5s;
+  animation-duration: 4.2s;
 
   animation-delay: -2.1s;
 }
@@ -478,9 +490,9 @@ body {
 
   width: 25%;
 
-  --float: -15px;
+  --float: -24px;
 
-  animation-duration: 6s;
+  animation-duration: 4.5s;
 
   animation-delay: -0.8s;
 }
@@ -493,9 +505,9 @@ body {
 
   width: 24%;
 
-  --float: -13px;
+  --float: -21px;
 
-  animation-duration: 5.7s;
+  animation-duration: 4.1s;
 
   animation-delay: -1.9s;
 }
@@ -508,9 +520,9 @@ body {
 
   width: 24%;
 
-  --float: -15px;
+  --float: -22px;
 
-  animation-duration: 5.4s;
+  animation-duration: 4.3s;
 
   animation-delay: -0.95s;
 }
@@ -523,9 +535,9 @@ body {
 
   width: 24%;
 
-  --float: -14px;
+  --float: -20px;
 
-  animation-duration: 5.9s;
+  animation-duration: 4.5s;
 
   animation-delay: -2.5s;
 }
@@ -534,115 +546,16 @@ body {
    ULTRA-SMOOTH FLOAT
    ===================================================== */
 
-/*
-  More intermediate positions are intentionally used.
+/* Smooth acceleration and deceleration at both turning points. */
 
-  Compared with only:
-  0% -> 50% -> 100%
-
-  this gives the compositor a very predictable continuous
-  path and prevents the noticeable hesitation around the
-  upward movement / direction change.
-*/
-
-@keyframes islandFloat {
-  0% {
-    transform:
-      translate3d(
-        0,
-        0,
-        0
-      );
-  }
-
-  10% {
-    transform:
-      translate3d(
-        0,
-        calc(var(--float) * 0.095),
-        0
-      );
-  }
-
-  20% {
-    transform:
-      translate3d(
-        0,
-        calc(var(--float) * 0.345),
-        0
-      );
-  }
-
-  30% {
-    transform:
-      translate3d(
-        0,
-        calc(var(--float) * 0.655),
-        0
-      );
-  }
-
-  40% {
-    transform:
-      translate3d(
-        0,
-        calc(var(--float) * 0.905),
-        0
-      );
+@keyframes homeIslandFloat {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
   }
 
   50% {
-    transform:
-      translate3d(
-        0,
-        var(--float),
-        0
-      );
-  }
-
-  60% {
-    transform:
-      translate3d(
-        0,
-        calc(var(--float) * 0.905),
-        0
-      );
-  }
-
-  70% {
-    transform:
-      translate3d(
-        0,
-        calc(var(--float) * 0.655),
-        0
-      );
-  }
-
-  80% {
-    transform:
-      translate3d(
-        0,
-        calc(var(--float) * 0.345),
-        0
-      );
-  }
-
-  90% {
-    transform:
-      translate3d(
-        0,
-        calc(var(--float) * 0.095),
-        0
-      );
-  }
-
-  100% {
-    transform:
-      translate3d(
-        0,
-        0,
-        0
-      );
+    transform: translate3d(0, var(--float), 0) scale(1.027);
   }
 }
 
@@ -658,20 +571,4 @@ body {
   .island img {
     transition: none;
   }
-}
-
-/* =====================================================
-   CONWAY
-   Hide global Home during actual game
-   ===================================================== */
-
-#root:has(.cw-match)
-.back-home-button,
-
-#root:has(.cw-conway)
-.back-home-button,
-
-#root:has(.cw-end-screen)
-.back-home-button {
-  display: none !important;
 }

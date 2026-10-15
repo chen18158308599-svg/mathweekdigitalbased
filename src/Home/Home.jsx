@@ -1,13 +1,13 @@
 import "./Home.css";
 
 import background from "../assets/home-layers/background.png";
-import average from "../assets/home-layers/average.png";
-import conway from "../assets/home-layers/conway.png";
-import deal from "../assets/home-layers/deal.png";
-import knn from "../assets/home-layers/knn.png";
-import sequence from "../assets/home-layers/sequence.png";
-import planarity from "../assets/home-layers/planarity.png";
-import symmetry from "../assets/home-layers/symmetry.png";
+import average from "../assets/home-layers/average.webp";
+import conway from "../assets/home-layers/conway.webp";
+import deal from "../assets/home-layers/deal.webp";
+import knn from "../assets/home-layers/knn.webp";
+import sequence from "../assets/home-layers/sequence.webp";
+import planarity from "../assets/home-layers/planarity.webp";
+import symmetry from "../assets/home-layers/symmetry.webp";
 
 export default function Home({ onSelectGame }) {
   return (
@@ -16,7 +16,9 @@ export default function Home({ onSelectGame }) {
           MATH WEEK TITLE
       ========================= */}
       <div className="mathweek-title">
-        <div className="mathweek-title-main">MATH WEEK</div>
+        <div className="mathweek-title-kicker">MATH WEEK 2026</div>
+        <div className="mathweek-title-main">MATHVERSE</div>
+        <div className="mathweek-title-subtitle">CHOOSE YOUR REALM</div>
       </div>
 
       {/* =========================
