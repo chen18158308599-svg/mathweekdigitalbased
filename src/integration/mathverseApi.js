@@ -169,7 +169,7 @@ export function updatePostGamePlayer(attemptId, playerSlot, player) {
       retryable: false,
     });
   }
-  if (record.state === "submitted") return pending;
+  if (record.state === "submitted" || record.identityLocked) return pending;
 
   record.username = String(player?.username ?? "").trim();
   record.studentId = String(player?.studentId ?? "").trim();
@@ -253,6 +253,55 @@ export async function submitPostGamePlayer(attemptId, playerSlot, player) {
       code: "INVALID_REGISTRATION",
       retryable: false,
     });
+  }
+
+  const store = loadStore();
+  const sessionKey = recordKey(current.apiGameId, pendingPlayer.sessionId);
+  const registration = store.registrations[sessionKey];
+  const priorScore = store.scores[sessionKey];
+  const knownIdentity = priorScore ?? registration;
+  const identityChanged =
+    knownIdentity &&
+    (knownIdentity.username !== normalized.username ||
+      knownIdentity.studentId !== normalized.studentId ||
+      knownIdentity.playerSlot !== playerSlot);
+  const sessionConflict =
+    registration?.lastError?.code === "SESSION_CONFLICT";
+  const replaceSession = Boolean(identityChanged || sessionConflict);
+
+  if (replaceSession && priorScore) {
+    if (identityChanged) {
+      pendingPlayer.username = priorScore.username;
+      pendingPlayer.studentId = priorScore.studentId;
+    }
+    pendingPlayer.identityLocked = true;
+    pendingPlayer.error = {
+      code: "SESSION_CONFLICT",
+      message:
+        "This score session may already have been submitted. Its session is locked to prevent a duplicate score.",
+      retryable: false,
+    };
+    current.updatedAt = new Date().toISOString();
+    store.pendingSubmissions[attemptId] = current;
+    saveStore(store);
+    throw new MathverseApiError(pendingPlayer.error.message, {
+      code: "SESSION_CONFLICT",
+      retryable: false,
+    });
+  }
+
+  if (replaceSession) {
+    let nextSessionId;
+    do {
+      nextSessionId = createPlayerSessionId();
+    } while (
+      store.registrations[recordKey(current.apiGameId, nextSessionId)] ||
+      store.scores[recordKey(current.apiGameId, nextSessionId)]
+    );
+    pendingPlayer.sessionId = nextSessionId;
+    current.updatedAt = new Date().toISOString();
+    store.pendingSubmissions[attemptId] = current;
+    saveStore(store);
   }
 
   updatePostGamePlayer(attemptId, playerSlot, normalized);

@@ -14,19 +14,80 @@ function isCompleteResult(record) {
   return record.requiredSlots.every((slot) => record.results[slot]);
 }
 
+function hasUnsavedPlayers(record) {
+  return record.requiredSlots.some(
+    (slot) => record.players[slot]?.state !== "submitted"
+  );
+}
+
+function sortSubmissions(submissions) {
+  return submissions.sort((left, right) =>
+    right.createdAt.localeCompare(left.createdAt)
+  );
+}
+
 export function useScoreRecording() {
-  const [pendingSubmission, setPendingSubmission] = useState(() => {
-    const saved = getPendingPostGameResults()
-      .filter(isCompleteResult)
-      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0];
-    return saved ?? null;
-  });
+  const [submissions, setSubmissions] = useState(() =>
+    sortSubmissions(
+      getPendingPostGameResults().filter(
+        (record) => isCompleteResult(record) && hasUnsavedPlayers(record)
+      )
+    )
+  );
+  const [activeAttemptId, setActiveAttemptId] = useState(
+    () => submissions[0]?.attemptId ?? null
+  );
+  const [resultRevision, setResultRevision] = useState(0);
+
+  const pendingSubmissions = submissions.filter(
+    (record) => isCompleteResult(record) && hasUnsavedPlayers(record)
+  );
+  const pendingSubmission =
+    submissions.find((record) => record.attemptId === activeAttemptId) ??
+    submissions[0] ??
+    null;
+
+  const storeSubmission = useCallback((record) => {
+    setSubmissions((current) =>
+      sortSubmissions([
+        ...current.filter((item) => item.attemptId !== record.attemptId),
+        record,
+      ])
+    );
+  }, []);
+
+  const setActiveSubmission = useCallback((attemptId) => {
+    setActiveAttemptId(attemptId);
+  }, []);
+
+  const updatePlayer = useCallback((attemptId, playerSlot, player) => {
+    const updated = updatePostGamePlayer(attemptId, playerSlot, player);
+    storeSubmission(updated);
+  }, [storeSubmission]);
+
+  const submitPlayer = useCallback(async (attemptId, playerSlot, player) => {
+    try {
+      const updated = await submitPostGamePlayer(attemptId, playerSlot, player);
+      storeSubmission(updated);
+      return updated;
+    } catch (error) {
+      const updated = getPendingPostGameResults().find(
+        (record) => record.attemptId === attemptId
+      );
+      if (updated) storeSubmission(updated);
+      throw error;
+    }
+  }, [storeSubmission]);
 
   useEffect(() => {
     function acceptResult(localGameId, result) {
       try {
         const pending = queuePostGameResult(localGameId, result);
-        if (isCompleteResult(pending)) setPendingSubmission(pending);
+        if (isCompleteResult(pending)) {
+          storeSubmission(pending);
+          setActiveAttemptId(pending.attemptId);
+          setResultRevision((revision) => revision + 1);
+        }
       } catch (error) {
         console.error("Unable to retain finalized game result:", error);
       }
@@ -51,33 +112,14 @@ export function useScoreRecording() {
       );
       window.removeEventListener(AVERAGE_RESULT_EVENT, handleAverageResult);
     };
-  }, []);
-
-  const updatePlayer = useCallback((attemptId, playerSlot, player) => {
-    const updated = updatePostGamePlayer(attemptId, playerSlot, player);
-    setPendingSubmission(updated);
-  }, []);
-
-  const submitPlayer = useCallback(async (attemptId, playerSlot, player) => {
-    try {
-      const updated = await submitPostGamePlayer(attemptId, playerSlot, player);
-      setPendingSubmission(updated);
-      return updated;
-    } catch (error) {
-      const updated = getPendingPostGameResults().find(
-        (record) => record.attemptId === attemptId
-      );
-      if (updated) setPendingSubmission(updated);
-      throw error;
-    }
-  }, []);
-
-  const clearPending = useCallback(() => setPendingSubmission(null), []);
+  }, [storeSubmission]);
 
   return {
     pendingSubmission,
+    pendingSubmissions,
+    resultRevision,
+    setActiveSubmission,
     updatePlayer,
     submitPlayer,
-    clearPending,
   };
 }

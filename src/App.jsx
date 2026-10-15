@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
 import Home from "./Home/Home";
+import { GAME_ACCESS } from "./config/gameAccess.js";
 import GamePasswordGate from "./components/GamePasswordGate";
 import PostGameSubmission from "./components/PostGameSubmission";
-import { clearPostGameResult } from "./integration/mathverseApi.js";
 import { useScoreRecording } from "./integration/useScoreRecording.js";
 
 import AverageGame from "./games/AverageGame/AverageGame";
@@ -92,10 +92,20 @@ export default function App() {
   const [authorizedGame, setAuthorizedGame] = useState(null);
   const {
     pendingSubmission,
+    pendingSubmissions,
+    resultRevision,
+    setActiveSubmission,
     updatePlayer,
     submitPlayer,
-    clearPending,
   } = useScoreRecording();
+  const [postGameOpen, setPostGameOpen] = useState(false);
+  const seenResultRevision = useRef(resultRevision);
+
+  useEffect(() => {
+    if (resultRevision === seenResultRevision.current) return;
+    seenResultRevision.current = resultRevision;
+    setPostGameOpen(true);
+  }, [resultRevision]);
 
   function selectGame(gameId) {
     setSelectedGame(gameId);
@@ -115,23 +125,44 @@ export default function App() {
     setPage(selectedGame);
   }
 
-  function finishPostGame() {
-    if (pendingSubmission) clearPostGameResult(pendingSubmission.attemptId);
-    clearPending();
+  function dismissPostGame() {
+    setPostGameOpen(false);
     returnHome();
   }
 
   const postGameReady = pendingSubmission?.requiredSlots?.every(
     (slot) => pendingSubmission.results[slot]
   );
-  const postGameSubmission = postGameReady ? (
+  const postGameSubmission = postGameOpen && postGameReady ? (
     <PostGameSubmission
       key={pendingSubmission.attemptId}
       submission={pendingSubmission}
       onUpdatePlayer={updatePlayer}
       onSubmitPlayer={submitPlayer}
-      onReturnHome={finishPostGame}
+      onReturnHome={dismissPostGame}
     />
+  ) : null;
+  const pendingSubmissionNavigation = pendingSubmissions.length > 0 ? (
+    <details className="pending-submission-navigation">
+      <summary>
+        PENDING SCORES <span>{pendingSubmissions.length}</span>
+      </summary>
+      <div className="pending-submission-navigation__list">
+        {pendingSubmissions.map((submission) => (
+          <button
+            key={submission.attemptId}
+            type="button"
+            onClick={() => {
+              setActiveSubmission(submission.attemptId);
+              setPostGameOpen(true);
+            }}
+          >
+            <span>{GAME_ACCESS[submission.localGameId]?.name ?? "Game result"}</span>
+            <strong>RESUME</strong>
+          </button>
+        ))}
+      </div>
+    </details>
   ) : null;
 
   /* =====================================================
@@ -142,6 +173,7 @@ export default function App() {
     return (
       <>
         <Home onSelectGame={selectGame} />
+        {pendingSubmissionNavigation}
         {postGameSubmission}
       </>
     );

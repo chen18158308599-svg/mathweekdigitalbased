@@ -99,10 +99,23 @@ globalThis.window = {
 
 const proxyCalls = [];
 let failNextScore = false;
+let failNextRegistrationConflict = false;
 let scoreRowOverride = null;
 globalThis.fetch = async (_url, options) => {
   const body = JSON.parse(options.body);
   proxyCalls.push(body);
+  if (failNextRegistrationConflict && body.action === "register") {
+    failNextRegistrationConflict = false;
+    return new Response(
+      JSON.stringify({
+        ok: false,
+        code: "SESSION_CONFLICT",
+        retryable: false,
+        error: "session_id is already assigned to another player",
+      }),
+      { status: 409, headers: { "Content-Type": "application/json" } }
+    );
+  }
   if (failNextScore && body.action === "score") {
     failNextScore = false;
     return new Response(
@@ -359,13 +372,124 @@ assert.equal(retryRecord.players.single.sessionId, retryQueued.players.single.se
 assert.equal(retryRecord.players.single.username, "TEST retry KNN");
 assert.equal(retryRecord.players.single.studentId, "000retry");
 assert.ok(retryRecord.players.single.error);
+const scoreCallsBeforeIdentityChange = proxyCalls.filter(
+  (call) => call.action === "score" && call.session_id === retryQueued.players.single.sessionId
+).length;
+await assert.rejects(
+  () =>
+    submitPostGamePlayer(retryAttemptId, "single", {
+      username: "TEST changed identity",
+      studentId: "000changed",
+    }),
+  (error) => error.code === "SESSION_CONFLICT"
+);
+const lockedRetry = getPendingPostGameResults().find(
+  (record) => record.attemptId === retryAttemptId
+);
+assert.equal(lockedRetry.players.single.identityLocked, true);
+assert.equal(lockedRetry.players.single.username, "TEST retry KNN");
+assert.equal(lockedRetry.players.single.studentId, "000retry");
+assert.equal(
+  proxyCalls.filter(
+    (call) => call.action === "score" && call.session_id === retryQueued.players.single.sessionId
+  ).length,
+  scoreCallsBeforeIdentityChange,
+  "changed identity must not cause a score to be resubmitted under a possibly-used session"
+);
 const retriedPostGame = await submitPostGamePlayer(retryAttemptId, "single", {
-  username: retryRecord.players.single.username,
-  studentId: retryRecord.players.single.studentId,
+  username: lockedRetry.players.single.username,
+  studentId: lockedRetry.players.single.studentId,
 });
 assert.equal(retriedPostGame.players.single.state, "submitted");
 assert.equal(retriedPostGame.players.single.sessionId, retryQueued.players.single.sessionId);
 clearPostGameResult(retryAttemptId);
+
+const conflictAttemptId = "TEST_post_game_session_conflict";
+const conflictQueued = queuePostGameResult("knn", {
+  attemptId: conflictAttemptId,
+  playerSlot: "single",
+  finalScore: 685,
+  outcome: "win",
+});
+const originalConflictSession = conflictQueued.players.single.sessionId;
+const storedClientData = JSON.parse(localStorage.getItem("mathverse:score-sync:v1"));
+storedClientData.registrations[`knn_heist:${originalConflictSession}`] = {
+  apiGameId: "knn_heist",
+  sessionId: originalConflictSession,
+  playerSlot: "single",
+  username: "TEST previous player",
+  studentId: "PREVIOUS-ID",
+  state: "registered",
+  response: { ok: true, status: "register_ok", row: 24 },
+};
+localStorage.setItem("mathverse:score-sync:v1", JSON.stringify(storedClientData));
+const conflictCallStart = proxyCalls.length;
+const recoveredConflict = await submitPostGamePlayer(
+  conflictAttemptId,
+  "single",
+  { username: "TEST corrected player", studentId: "CORRECTED-ID" }
+);
+assert.notEqual(
+  recoveredConflict.players.single.sessionId,
+  originalConflictSession,
+  "a conflicting session must be replaced, never reassigned"
+);
+assert.equal(
+  storedClientData.registrations[`knn_heist:${originalConflictSession}`].username,
+  "TEST previous player",
+  "the previous registration record is retained"
+);
+assert.deepEqual(
+  proxyCalls.slice(conflictCallStart).map((call) => [call.action, call.session_id]),
+  [
+    ["register", recoveredConflict.players.single.sessionId],
+    ["score", recoveredConflict.players.single.sessionId],
+  ]
+);
+assert.equal(recoveredConflict.players.single.state, "submitted");
+clearPostGameResult(conflictAttemptId);
+
+const upstreamConflictAttemptId = "TEST_post_game_upstream_session_conflict";
+const upstreamConflictQueued = queuePostGameResult("knn", {
+  attemptId: upstreamConflictAttemptId,
+  playerSlot: "single",
+  finalScore: 735,
+  outcome: "win",
+});
+const upstreamConflictSession = upstreamConflictQueued.players.single.sessionId;
+const upstreamConflictStart = proxyCalls.length;
+failNextRegistrationConflict = true;
+await assert.rejects(
+  () =>
+    submitPostGamePlayer(upstreamConflictAttemptId, "single", {
+      username: "TEST upstream conflict",
+      studentId: "UPSTREAM-ID",
+    }),
+  (error) => error.code === "SESSION_CONFLICT"
+);
+const upstreamConflictRetry = await submitPostGamePlayer(
+  upstreamConflictAttemptId,
+  "single",
+  {
+    username: "TEST upstream conflict",
+    studentId: "UPSTREAM-ID",
+  }
+);
+assert.notEqual(
+  upstreamConflictRetry.players.single.sessionId,
+  upstreamConflictSession,
+  "an explicit API session conflict retries with a fresh session ID"
+);
+assert.deepEqual(
+  proxyCalls.slice(upstreamConflictStart).map((call) => [call.action, call.session_id]),
+  [
+    ["register", upstreamConflictSession],
+    ["register", upstreamConflictRetry.players.single.sessionId],
+    ["score", upstreamConflictRetry.players.single.sessionId],
+  ]
+);
+assert.equal(upstreamConflictRetry.players.single.state, "submitted");
+clearPostGameResult(upstreamConflictAttemptId);
 
 const mismatchAttemptId = "TEST_post_game_row_mismatch";
 queuePostGameResult("knn", {

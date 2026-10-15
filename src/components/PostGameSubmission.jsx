@@ -11,8 +11,6 @@ function PlayerForm({
   onChange,
   onSubmit,
 }) {
-  const [username, setUsername] = useState(player.username);
-  const [studentId, setStudentId] = useState(player.studentId);
   const [submitting, setSubmitting] = useState(false);
   const saved = player.state === "submitted";
 
@@ -21,7 +19,10 @@ function PlayerForm({
     if (submitting || saved) return;
     setSubmitting(true);
     try {
-      await onSubmit(slot, { username: username.trim(), studentId: studentId.trim() });
+      await onSubmit(slot, {
+        username: player.username.trim(),
+        studentId: player.studentId.trim(),
+      });
     } catch (error) {
       console.error(`Post-game score submission failed for ${slot}:`, error);
     } finally {
@@ -30,11 +31,9 @@ function PlayerForm({
   }
 
   function handleChange(field, value) {
-    if (field === "username") setUsername(value);
-    else setStudentId(value);
     onChange(slot, {
-      username: field === "username" ? value : username,
-      studentId: field === "studentId" ? value : studentId,
+      username: field === "username" ? value : player.username,
+      studentId: field === "studentId" ? value : player.studentId,
     });
   }
 
@@ -60,7 +59,8 @@ function PlayerForm({
               autoComplete="off"
               maxLength={40}
               required
-              value={username}
+              disabled={submitting || player.identityLocked}
+              value={player.username}
               onChange={(event) => handleChange("username", event.target.value)}
             />
           </label>
@@ -72,7 +72,8 @@ function PlayerForm({
               autoComplete="off"
               maxLength={20}
               required
-              value={studentId}
+              disabled={submitting || player.identityLocked}
+              value={player.studentId}
               onChange={(event) => handleChange("studentId", event.target.value)}
             />
           </label>
@@ -141,11 +142,18 @@ export default function PostGameSubmission({
             </div>
           </>
         ) : (
-          <p className="post-game-note">
-            {submission.requiredSlots.length === 2
-              ? "Both player scores must be saved to complete this match."
-              : "Your finalized result is retained for a safe retry."}
-          </p>
+          <>
+            <p className="post-game-note">
+              {submission.requiredSlots.length === 2
+                ? "Both player scores must be saved to complete this match."
+                : "Your finalized result is retained for a safe retry."}
+            </p>
+            <div className="post-game-actions post-game-actions--pending">
+              <button type="button" onClick={onReturnHome}>
+                RETURN HOME
+              </button>
+            </div>
+          </>
         )}
       </section>
     </main>
