@@ -13,6 +13,10 @@ export default function Home({ onSelectGame }) {
   return (
     <>
       {/* =========================
+          HOME
+      ========================= */}
+      <main className="home-page">
+      {/* =========================
           MATH WEEK TITLE
       ========================= */}
       <div className="mathweek-title">
@@ -21,10 +25,6 @@ export default function Home({ onSelectGame }) {
         <div className="mathweek-title-subtitle">CHOOSE YOUR REALM</div>
       </div>
 
-      {/* =========================
-          HOME
-      ========================= */}
-      <main className="home-page">
         {/* Background */}
         <img
           src={background}

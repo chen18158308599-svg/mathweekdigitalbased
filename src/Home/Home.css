@@ -26,6 +26,8 @@ body {
 
 .home-page {
   position: relative;
+  flex-shrink: 0;
+  margin: auto;
 
   width: min(100vw, 177.7778vh);
   height: min(100vh, 56.25vw);
@@ -71,10 +73,10 @@ body {
    ===================================================== */
 
 .mathweek-title {
-  position: fixed;
+  position: absolute;
 
-  left: 50vw;
-  top: 42vh;
+  left: 50%;
+  top: 42%;
 
   transform: translate(-50%, -50%);
 
