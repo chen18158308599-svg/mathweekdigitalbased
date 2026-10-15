@@ -96,11 +96,16 @@ export default function PostGameSubmission({
   onUpdatePlayer,
   onSubmitPlayer,
   onReturnHome,
+  pendingSubmissions,
+  onResumeSubmission,
 }) {
   const allSaved = submission.requiredSlots.every(
     (slot) => submission.players[slot].state === "submitted"
   );
   const isAverage = submission.localGameId === "average";
+  const otherPendingSubmissions = pendingSubmissions.filter(
+    (item) => item.attemptId !== submission.attemptId
+  );
 
   return (
     <main className="post-game-submission">
@@ -109,6 +114,23 @@ export default function PostGameSubmission({
           {GAME_ACCESS[submission.localGameId]?.name}
         </span>
         <h1 id="post-game-title">POST-GAME REGISTRATION</h1>
+        {otherPendingSubmissions.length > 0 && (
+          <details className="post-game-pending">
+            <summary>OTHER UNSAVED RESULTS</summary>
+            <div className="post-game-pending__list">
+              {otherPendingSubmissions.map((item) => (
+                <button
+                  key={item.attemptId}
+                  type="button"
+                  onClick={() => onResumeSubmission(item.attemptId)}
+                >
+                  <span>{GAME_ACCESS[item.localGameId]?.name ?? "Game result"}</span>
+                  <strong>RESUME</strong>
+                </button>
+              ))}
+            </div>
+          </details>
+        )}
         <div className="post-game-player-list">
           {submission.requiredSlots.map((slot) => (
             <PlayerForm

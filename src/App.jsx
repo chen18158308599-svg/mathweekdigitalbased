@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
 import Home from "./Home/Home";
-import { GAME_ACCESS } from "./config/gameAccess.js";
 import GamePasswordGate from "./components/GamePasswordGate";
 import PostGameSubmission from "./components/PostGameSubmission";
 import { useScoreRecording } from "./integration/useScoreRecording.js";
@@ -140,29 +139,9 @@ export default function App() {
       onUpdatePlayer={updatePlayer}
       onSubmitPlayer={submitPlayer}
       onReturnHome={dismissPostGame}
+      pendingSubmissions={pendingSubmissions}
+      onResumeSubmission={setActiveSubmission}
     />
-  ) : null;
-  const pendingSubmissionNavigation = pendingSubmissions.length > 0 ? (
-    <details className="pending-submission-navigation">
-      <summary>
-        PENDING SCORES <span>{pendingSubmissions.length}</span>
-      </summary>
-      <div className="pending-submission-navigation__list">
-        {pendingSubmissions.map((submission) => (
-          <button
-            key={submission.attemptId}
-            type="button"
-            onClick={() => {
-              setActiveSubmission(submission.attemptId);
-              setPostGameOpen(true);
-            }}
-          >
-            <span>{GAME_ACCESS[submission.localGameId]?.name ?? "Game result"}</span>
-            <strong>RESUME</strong>
-          </button>
-        ))}
-      </div>
-    </details>
   ) : null;
 
   /* =====================================================
@@ -173,7 +152,6 @@ export default function App() {
     return (
       <>
         <Home onSelectGame={selectGame} />
-        {pendingSubmissionNavigation}
         {postGameSubmission}
       </>
     );
